@@ -1,0 +1,293 @@
+// LegalFlow Digital – Prisma Schema
+// Based on TFG data model (Tercera_Entrega_V1.pdf)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+  LAWYER
+  ASSISTANT
+}
+
+enum UserPlan {
+  FREE
+  PRO
+  ENTERPRISE
+}
+
+enum EstadoExpediente {
+  ABIERTO
+  EN_CURSO
+  PENDIENTE_CLIENTE
+  ARCHIVADO
+  CERRADO
+}
+
+enum EstadoFactura {
+  BORRADOR
+  EMITIDA
+  PAGADA
+  VENCIDA
+  ANULADA
+}
+
+enum TipoDocumento {
+  CONTRATO
+  ESCRITO_JUDICIAL
+  DICTAMEN
+  PODER_NOTARIAL
+  FACTURA_PDF
+  OTRO
+}
+
+enum TipoConversacion {
+  NAVEGACION
+  JURISPRUDENCIA
+}
+
+enum TipoAuditLog {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  DOWNLOAD
+}
+
+// ─── Usuario ────────────────────────────────────────────────────────────────
+
+model Usuario {
+  id                String    @id @default(uuid())
+  email             String    @unique
+  passwordHash      String    @map("password_hash")
+  nombre            String
+  apellidos         String
+  role              UserRole  @default(LAWYER)
+  plan              UserPlan  @default(FREE)
+  active            Boolean   @default(true)
+  emailVerified     Boolean   @default(false) @map("email_verified")
+  refreshTokenHash  String?   @map("refresh_token_hash")
+  lastLoginAt       DateTime? @map("last_login_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  // Fiscal config
+  configuracionFiscal ConfiguracionFiscal?
+
+  // Relations
+  clientes       Cliente[]
+  expedientes    Expediente[]
+  documentos     Documento[]
+  facturas       Factura[]
+  conversaciones Conversacion[]
+  auditLogs      AuditLog[]
+
+  @@map("usuarios")
+}
+
+// ─── Cliente ─────────────────────────────────────────────────────────────────
+
+model Cliente {
+  id          String   @id @default(uuid())
+  usuarioId   String   @map("usuario_id")
+  nombre      String
+  apellidos   String?
+  email       String?
+  telefono    String?
+  nif         String?
+  direccion   String?
+  activo      Boolean  @default(true)
+  notas       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  usuario     Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expedientes Expediente[]
+
+  @@index([usuarioId])
+  @@map("clientes")
+}
+
+// ─── Expediente ───────────────────────────────────────────────────────────────
+
+model Expediente {
+  id          String           @id @default(uuid())
+  usuarioId   String           @map("usuario_id")
+  clienteId   String           @map("cliente_id")
+  titulo      String
+  descripcion String?
+  estado      EstadoExpediente @default(ABIERTO)
+  fechaApertura DateTime       @default(now()) @map("fecha_apertura")
+  fechaCierre   DateTime?      @map("fecha_cierre")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+
+  usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  cliente    Cliente     @relation(fields: [clienteId], references: [id])
+  documentos Documento[]
+  facturas   Factura[]
+
+  @@index([clienteId, estado])
+  @@map("expedientes")
+}
+
+// ─── Documento ────────────────────────────────────────────────────────────────
+
+model Documento {
+  id           String        @id @default(uuid())
+  usuarioId    String        @map("usuario_id")
+  expedienteId String        @map("expediente_id")
+  nombre       String
+  tipo         TipoDocumento @default(OTRO)
+  s3Key        String        @map("s3_key")
+  sizeBytes    Int           @map("size_bytes")
+  mimeType     String        @map("mime_type")
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  @@index([expedienteId])
+  @@map("documentos")
+}
+
+// ─── Factura ──────────────────────────────────────────────────────────────────
+
+model Factura {
+  id              String        @id @default(uuid())
+  usuarioId       String        @map("usuario_id")
+  expedienteId    String?       @map("expediente_id")
+  numero          String
+  estado          EstadoFactura @default(BORRADOR)
+  fechaEmision    DateTime      @map("fecha_emision")
+  fechaVencimiento DateTime?    @map("fecha_vencimiento")
+  baseImponible   Decimal       @map("base_imponible") @db.Decimal(12, 2)
+  tipoIva         Decimal       @default(21) @map("tipo_iva") @db.Decimal(5, 2)
+  cuotaIva        Decimal       @map("cuota_iva") @db.Decimal(12, 2)
+  tipoIrpf        Decimal       @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
+  cuotaIrpf       Decimal       @map("cuota_irpf") @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+  notas           String?
+  s3Key           String?       @map("s3_key")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expediente Expediente? @relation(fields: [expedienteId], references: [id])
+  suplidos   Suplido[]
+
+  @@unique([usuarioId, numero])
+  @@index([usuarioId, fechaEmision(sort: Asc)])
+  @@map("facturas")
+}
+
+// ─── Suplido ──────────────────────────────────────────────────────────────────
+
+model Suplido {
+  id          String   @id @default(uuid())
+  facturaId   String   @map("factura_id")
+  concepto    String
+  importe     Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  factura Factura @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+
+  @@map("suplidos")
+}
+
+// ─── ConfiguracionFiscal ─────────────────────────────────────────────────────
+
+model ConfiguracionFiscal {
+  id              String   @id @default(uuid())
+  usuarioId       String   @unique @map("usuario_id")
+  tipoIva         Decimal  @default(21) @map("tipo_iva") @db.Decimal(5, 2)
+  tipoIrpf        Decimal  @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
+  nuevoProfesional Boolean  @default(false) @map("nuevo_profesional")
+  nif             String?
+  epigrafeCnae    String?  @map("epigrafe_cnae")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("configuracion_fiscal")
+}
+
+// ─── Conversacion (chatbot history) ──────────────────────────────────────────
+
+model Conversacion {
+  id        String           @id @default(uuid())
+  usuarioId String           @map("usuario_id")
+  tipo      TipoConversacion
+  titulo    String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  updatedAt DateTime         @updatedAt @map("updated_at")
+
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  mensajes Mensaje[]
+
+  @@index([usuarioId, tipo])
+  @@map("conversaciones")
+}
+
+model Mensaje {
+  id             String   @id @default(uuid())
+  conversacionId String   @map("conversacion_id")
+  role           String   // 'user' | 'assistant'
+  content        String   @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversacion Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+
+  @@map("mensajes")
+}
+
+// ─── JurisprudenciaBase ───────────────────────────────────────────────────────
+
+model JurisprudenciaBase {
+  id          String   @id @default(uuid())
+  titulo      String
+  resumen     String   @db.Text
+  tribunal    String?
+  fecha       DateTime?
+  url         String?
+  contenido   String   @db.Text
+  // embedding stored as JSON array (use pgvector extension for proper vector search)
+  embedding   Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("jurisprudencia_base")
+}
+
+// ─── AuditLog ─────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String       @id @default(uuid())
+  usuarioId  String?      @map("usuario_id")
+  accion     TipoAuditLog
+  entidad    String
+  entidadId  String?      @map("entidad_id")
+  detalle    Json?
+  ip         String?
+  userAgent  String?      @map("user_agent")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([usuarioId, createdAt])
+  @@index([entidad, entidadId])
+  @@map("audit_logs")
+}
