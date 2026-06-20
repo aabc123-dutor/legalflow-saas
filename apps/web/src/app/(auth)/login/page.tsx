@@ -38,15 +38,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="w-full max-w-md bg-white rounded-xl shadow-sm border p-8">
-        {/* Logo */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand-600 mb-3">
-            <span className="text-white font-bold text-lg">LF</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">LegalFlow Digital</h1>
-          <p className="text-sm text-gray-500 mt-1">Accede a tu cuenta</p>
+          <img src="/logo.png" alt="Merino & Vaskovska Abogados" className="h-40 mx-auto mb-4" />
+          <p className="text-sm text-gray-500">Accede a tu cuenta</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -57,7 +53,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
-              placeholder="abogada@despacho.es"
+              placeholder="despacho@merinovaskovskabogados.com"
             />
             {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>}
           </div>
@@ -82,9 +78,9 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg text-sm transition-colors disabled:opacity-60"
+            className="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg text-xs tracking-[2px] uppercase transition-colors disabled:opacity-60"
           >
-            {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            {isSubmitting ? 'Iniciando sesión...' : 'Acceder'}
           </button>
         </form>
 

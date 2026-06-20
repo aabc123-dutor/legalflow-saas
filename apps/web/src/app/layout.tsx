@@ -2,14 +2,14 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-
+ 
 const inter = Inter({ subsets: ['latin'] });
-
+ 
 export const metadata: Metadata = {
-  title: 'LegalFlow Digital',
-  description: 'Plataforma SaaS de gestión legal para abogados y pequeños despachos',
+  title: 'Merino & Vaskovska Abogados',
+  description: 'Plataforma de gestión legal interna del despacho Merino & Vaskovska Abogados',
 };
-
+ 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">

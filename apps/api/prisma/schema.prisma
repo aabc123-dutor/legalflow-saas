@@ -12,17 +12,17 @@ datasource db {
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
-enum UserRole {
-  ADMIN
-  LAWYER
-  ASSISTANT
+enum RolUsuario {
+  ABOGADO
+  CLIENTE
 }
 
-enum UserPlan {
+enum PlanUsuario {
   FREE
   PRO
   ENTERPRISE
 }
+
 
 enum EstadoExpediente {
   ABIERTO
@@ -72,11 +72,10 @@ model Usuario {
   passwordHash      String    @map("password_hash")
   nombre            String
   apellidos         String
-  role              UserRole  @default(LAWYER)
-  plan              UserPlan  @default(FREE)
+  role              RolUsuario  @default(CLIENTE)
+  plan              PlanUsuario  @default(FREE)
   active            Boolean   @default(true)
   emailVerified     Boolean   @default(false) @map("email_verified")
-  refreshTokenHash  String?   @map("refresh_token_hash")
   lastLoginAt       DateTime? @map("last_login_at")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
@@ -107,6 +106,7 @@ model Cliente {
   nif         String?
   direccion   String?
   activo      Boolean  @default(true)
+  empresa     Boolean  @default(false)
   notas       String?
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -136,6 +136,7 @@ model Expediente {
   cliente    Cliente     @relation(fields: [clienteId], references: [id])
   documentos Documento[]
   facturas   Factura[]
+  suplidos   Suplido[]
 
   @@index([clienteId, estado])
   @@map("expedientes")
@@ -147,17 +148,24 @@ model Documento {
   id           String        @id @default(uuid())
   usuarioId    String        @map("usuario_id")
   expedienteId String        @map("expediente_id")
-  nombre       String
+  suplidoId    String?       @map("suplido_id")
+  facturaId    String?       @map("factura_id")
+  titulo       String
+  descripcion  String
   tipo         TipoDocumento @default(OTRO)
   s3Key        String        @map("s3_key")
+  cifrado      Boolean       @default(false)
+  hashSha256   String?       @map("hash_sha256")
+  s3Url        String?       @map("s3_url")
   sizeBytes    Int           @map("size_bytes")
-  mimeType     String        @map("mime_type")
   version      Int           @default(1)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
   usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  suplido Suplido? @relation(fields: [suplidoId], references: [id])
+  factura Factura? 
 
   @@index([expedienteId])
   @@map("documentos")
@@ -168,7 +176,7 @@ model Documento {
 model Factura {
   id              String        @id @default(uuid())
   usuarioId       String        @map("usuario_id")
-  expedienteId    String?       @map("expediente_id")
+  expedienteId    String        @map("expediente_id")
   numero          String
   estado          EstadoFactura @default(BORRADOR)
   fechaEmision    DateTime      @map("fecha_emision")
@@ -180,12 +188,13 @@ model Factura {
   cuotaIrpf       Decimal       @map("cuota_irpf") @db.Decimal(12, 2)
   total           Decimal       @db.Decimal(12, 2)
   notas           String?
-  s3Key           String?       @map("s3_key")
+  documentoId String?    @unique @map("documento_id")
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
 
   usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  expediente Expediente? @relation(fields: [expedienteId], references: [id])
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  documento   Documento? @relation(fields: [documentoId], references: [id])
   suplidos   Suplido[]
 
   @@unique([usuarioId, numero])
@@ -196,13 +205,16 @@ model Factura {
 // ─── Suplido ──────────────────────────────────────────────────────────────────
 
 model Suplido {
-  id          String   @id @default(uuid())
-  facturaId   String   @map("factura_id")
+  id          String    @id @default(uuid())
+  facturaId   String?   @map("factura_id")
+  expedienteId String   @map("expediente_id")
   concepto    String
-  importe     Decimal  @db.Decimal(12, 2)
-  createdAt   DateTime @default(now()) @map("created_at")
+  importe     Decimal   @db.Decimal(12, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  factura Factura @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  factura Factura? @relation(fields: [facturaId], references: [id])
+  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  documentos Documento[]
 
   @@map("suplidos")
 }

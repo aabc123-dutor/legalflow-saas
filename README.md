@@ -18,26 +18,29 @@ Los abogados autónomos pierden hasta un 30% de su tiempo en tareas no facturabl
 ---
 
 ## 🛠️ Tech Stack
-
 ### Frontend
-* **Framework:** React.js (Vite)
-* **Styling:** Tailwind CSS / Headless UI
-* **State Management:** React Context API / TanStack Query
+* **Framework:** Next.js 14 (App Router) + React 18 + TypeScript
+* **Styling:** Tailwind CSS
+* **Estado y datos:** Zustand (sesión) + TanStack Query (datos del servidor)
+* **Formularios:** React Hook Form + Zod
 
 ### Backend (API)
-* **Core:** Python + Django REST Framework
-* **Database:** PostgreSQL
-* **Auth:** JWT (JSON Web Tokens) + 2FA ready
-* **Storage:** AWS S3 (Documentos de clientes)
-
+* **Core:** Node.js + NestJS + TypeScript
+* **Base de datos:** PostgreSQL + Prisma ORM
+* **Auth:** JWT (access token + refresh token en cookie HttpOnly)
+* **Colas / Cache:** Redis + BullMQ
+* **IA:** Claude API (Anthropic) — asistente de navegación y chat de jurisprudencia (búsqueda simple, pendiente de vectorización con pgvector para RAG real)
+* **Almacenamiento:** AWS S3 (SDK integrado; subida de documentos de clientes pendiente de completar)
 ---
-
 ## 📁 Estructura del Proyecto
 
 ```text
 /legalflow-saas
-├── /backend          # Django API & Business Logic
-├── /frontend         # React SPA (Single Page Application)
-├── /docs             # Diagramas, manuales y propuesta de TFG
-├── docker-compose.yml # Orquestación para desarrollo
+├── /apps
+│   ├── /api            # Backend NestJS — API REST y lógica de negocio
+│   └── /web            # Frontend Next.js — interfaz del despacho
+├── /packages           # Código compartido entre apps (reservado, vacío por ahora)
+├── docker-compose.yml  # Postgres, Redis y Mailhog para desarrollo local
+├── pnpm-workspace.yaml # Configuración del monorepo (pnpm workspaces)
 └── README.md
+```
