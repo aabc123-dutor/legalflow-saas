@@ -1,0 +1,41 @@
+import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { AiService } from './ai.service';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+
+class ChatDto {
+  message: string;
+  conversacionId?: string;
+}
+
+@ApiTags('AI')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
+@Controller('ai')
+export class AiController {
+  constructor(private readonly service: AiService) {}
+
+  @Post('navegacion')
+  navegacion(@Body() body: ChatDto, @CurrentUser() user: { sub: string }) {
+    return this.service.navegacionChat(user.sub, body.conversacionId ?? null, body.message);
+  }
+
+  @Post('jurisprudencia')
+  jurisprudencia(@Body() body: ChatDto, @CurrentUser() user: { sub: string }) {
+    return this.service.jurisprudenciaChat(user.sub, body.conversacionId ?? null, body.message);
+  }
+
+  @Get('conversaciones')
+  conversaciones(
+    @CurrentUser() user: { sub: string },
+    @Query('tipo') tipo?: 'NAVEGACION' | 'JURISPRUDENCIA',
+  ) {
+    return this.service.getConversaciones(user.sub, tipo);
+  }
+
+  @Get('conversaciones/:id')
+  conversacion(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.service.getConversacion(id, user.sub);
+  }
+}
