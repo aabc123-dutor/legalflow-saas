@@ -31,7 +31,8 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(data);
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/dashboard');
+      const destino = res.data.user.role === 'ABOGADO' ? '/dashboard' : '/portal';
+      router.push(destino);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Error al iniciar sesión');
     }
@@ -83,11 +84,9 @@ export default function LoginPage() {
             {isSubmitting ? 'Iniciando sesión...' : 'Acceder'}
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          ¿No tienes cuenta?{' '}
-          <a href="/register" className="text-brand-600 hover:underline font-medium">
-            Regístrate
+        <p className="text-center text-sm text-gray-500 mt-4">
+          <a href="/forgot-password" className="text-brand-600 hover:underline">
+            ¿Olvidaste tu contraseña?
           </a>
         </p>
       </div>

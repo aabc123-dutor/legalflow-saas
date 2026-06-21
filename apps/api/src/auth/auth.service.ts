@@ -9,6 +9,10 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { Inject } from '@nestjs/common';
+import { REDIS_CLIENT } from '../common/redis/redis.module';
+import type Redis from 'ioredis';
+import { EmailService } from '@/common/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +20,10 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
-  ) {}
+    @Inject(REDIS_CLIENT) private redis: Redis,
+    private email: EmailService,
+
+  ) { }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
@@ -46,7 +53,7 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciales inválidas');
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     // Update last login
@@ -59,28 +66,28 @@ export class AuthService {
   }
 
   async refresh(userId: string, refreshToken: string) {
-    const user = await this.prisma.usuario.findUnique({ where: { id: userId } });
-    if (!user?.refreshTokenHash) throw new ForbiddenException('Acceso denegado');
+    const hash = await this.redis.get(`refresh:${userId}`);
+    if (!hash) throw new ForbiddenException('Acceso denegado');
 
-    const valid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    const valid = await bcrypt.compare(refreshToken, hash);
     if (!valid) throw new ForbiddenException('Token de refresco inválido');
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const user = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!user) throw new ForbiddenException('Acceso denegado');
+
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
     return tokens;
   }
 
   async logout(userId: string) {
-    await this.prisma.usuario.update({
-      where: { id: userId },
-      data: { refreshTokenHash: null },
-    });
+    await this.redis.del(`refresh:${userId}`);
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  private async generateTokens(userId: string, email: string) {
-    const payload = { sub: userId, email };
+  private async generateTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
@@ -95,12 +102,40 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-
   private async saveRefreshToken(userId: string, refreshToken: string) {
     const hash = await bcrypt.hash(refreshToken, 10);
+    const ttl = 60 * 60 * 24 * 7; // 7 días en segundos
+    await this.redis.set(`refresh:${userId}`, hash, 'EX', ttl);
+  }
+
+  async getMe(userId: string) {
+    return this.prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, nombre: true, apellidos: true, role: true, plan: true },
+    });
+  }
+
+  async forgotPassword(emailAddress: string) {
+    const user = await this.prisma.usuario.findUnique({ where: { email: emailAddress } });
+    // Siempre respondemos igual aunque el email no exista (evita user enumeration)
+    if (!user) return;
+
+    const token = crypto.randomUUID();
+    await this.redis.set(`reset:${token}`, user.id, 'EX', 60 * 30); // 30 minutos
+
+    await this.email.sendPasswordReset(emailAddress, token);
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const userId = await this.redis.get(`reset:${token}`);
+    if (!userId) throw new ForbiddenException('Token inválido o expirado');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
     await this.prisma.usuario.update({
       where: { id: userId },
-      data: { refreshTokenHash: hash },
+      data: { passwordHash },
     });
+
+    await this.redis.del(`reset:${token}`);
   }
 }

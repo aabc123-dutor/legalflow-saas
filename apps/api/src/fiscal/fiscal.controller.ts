@@ -3,10 +3,12 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FiscalService } from './fiscal.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '@/auth/decorators/roles.decorator';
 
 @ApiTags('Fiscal')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Roles('ABOGADO')
 @Controller('fiscal')
 export class FiscalController {
   constructor(private readonly service: FiscalService) {}
@@ -49,3 +51,5 @@ export class FiscalController {
     return this.service.getModelo130(user.sub, anio, trimestre);
   }
 }
+
+

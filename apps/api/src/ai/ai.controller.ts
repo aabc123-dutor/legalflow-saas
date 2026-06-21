@@ -3,6 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AiService } from './ai.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '@/auth/decorators/roles.decorator';
 
 class ChatDto {
   message: string;
@@ -12,6 +13,7 @@ class ChatDto {
 @ApiTags('AI')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Roles('ABOGADO')
 @Controller('ai')
 export class AiController {
   constructor(private readonly service: AiService) {}

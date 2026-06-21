@@ -5,12 +5,17 @@ import { BullModule } from '@nestjs/bull';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { ClientsModule } from './clients/clients.module';
+import { ClientesModule } from './clients/clients.module';
 import { ExpedientesModule } from './expedientes/expedientes.module';
 import { DocumentosModule } from './documentos/documentos.module';
 import { FacturasModule } from './facturas/facturas.module';
 import { FiscalModule } from './fiscal/fiscal.module';
 import { AiModule } from './ai/ai.module';
+import { RedisModule } from './common/redis/redis.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { EmailModule } from './common/email/email.module';
 
 @Module({
   imports: [
@@ -33,16 +38,28 @@ import { AiModule } from './ai/ai.module';
 
     // Core
     PrismaModule,
-
+    RedisModule,
     // Feature modules
     AuthModule,
     UsersModule,
-    ClientsModule,
+    ClientesModule,
     ExpedientesModule,
     DocumentosModule,
     FacturasModule,
     FiscalModule,
     AiModule,
+    EmailModule,
+  ],
+
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule { }

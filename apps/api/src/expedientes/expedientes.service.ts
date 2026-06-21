@@ -6,14 +6,14 @@ export class ExpedientesService {
   constructor(private prisma: PrismaService) {}
 
   findAll(usuarioId: string) {
-    return this.prisma.expedientes.findMany({
+    return this.prisma.expediente.findMany({
       where: { usuarioId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: string, usuarioId: string) {
-    const item = await this.prisma.expedientes.findFirst({
+    const item = await this.prisma.expediente.findFirst({
       where: { id, usuarioId },
     });
     if (!item) throw new NotFoundException('Expediente no encontrado/a');
@@ -21,16 +21,16 @@ export class ExpedientesService {
   }
 
   create(usuarioId: string, data: any) {
-    return this.prisma.expedientes.create({ data: { ...data, usuarioId } });
+    return this.prisma.expediente.create({ data: { ...data, usuarioId } });
   }
 
   async update(id: string, usuarioId: string, data: any) {
     await this.findOne(id, usuarioId);
-    return this.prisma.expedientes.update({ where: { id }, data });
+    return this.prisma.expediente.update({ where: { id }, data });
   }
 
   async remove(id: string, usuarioId: string) {
     await this.findOne(id, usuarioId);
-    return this.prisma.expedientes.delete({ where: { id } });
+    return this.prisma.expediente.delete({ where: { id } });
   }
 }
