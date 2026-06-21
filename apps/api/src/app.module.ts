@@ -15,6 +15,7 @@ import { RedisModule } from './common/redis/redis.module';
 import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { EmailModule } from './common/email/email.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     FacturasModule,
     FiscalModule,
     AiModule,
+    EmailModule,
   ],
 
   providers: [

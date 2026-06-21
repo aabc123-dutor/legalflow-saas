@@ -12,6 +12,7 @@ import { RegisterDto, LoginDto } from './dto/auth.dto';
 import { Inject } from '@nestjs/common';
 import { REDIS_CLIENT } from '../common/redis/redis.module';
 import type Redis from 'ioredis';
+import { EmailService } from '@/common/email/email.service';
 
 @Injectable()
 export class AuthService {
@@ -20,6 +21,8 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     @Inject(REDIS_CLIENT) private redis: Redis,
+    private email: EmailService,
+
   ) { }
 
   async register(dto: RegisterDto) {
@@ -84,7 +87,7 @@ export class AuthService {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   private async generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email , role};
+    const payload = { sub: userId, email, role };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
@@ -110,5 +113,29 @@ export class AuthService {
       where: { id: userId },
       select: { id: true, email: true, nombre: true, apellidos: true, role: true, plan: true },
     });
+  }
+
+  async forgotPassword(emailAddress: string) {
+    const user = await this.prisma.usuario.findUnique({ where: { email: emailAddress } });
+    // Siempre respondemos igual aunque el email no exista (evita user enumeration)
+    if (!user) return;
+
+    const token = crypto.randomUUID();
+    await this.redis.set(`reset:${token}`, user.id, 'EX', 60 * 30); // 30 minutos
+
+    await this.email.sendPasswordReset(emailAddress, token);
+  }
+
+  async resetPassword(token: string, newPassword: string) {
+    const userId = await this.redis.get(`reset:${token}`);
+    if (!userId) throw new ForbiddenException('Token inválido o expirado');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await this.prisma.usuario.update({
+      where: { id: userId },
+      data: { passwordHash },
+    });
+
+    await this.redis.del(`reset:${token}`);
   }
 }

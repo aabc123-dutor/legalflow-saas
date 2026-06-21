@@ -84,11 +84,9 @@ export default function LoginPage() {
             {isSubmitting ? 'Iniciando sesión...' : 'Acceder'}
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          ¿No tienes cuenta?{' '}
-          <a href="/register" className="text-brand-600 hover:underline font-medium">
-            Regístrate
+        <p className="text-center text-sm text-gray-500 mt-4">
+          <a href="/forgot-password" className="text-brand-600 hover:underline">
+            ¿Olvidaste tu contraseña?
           </a>
         </p>
       </div>
