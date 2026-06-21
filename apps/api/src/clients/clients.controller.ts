@@ -3,11 +3,13 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ClientesService } from './clients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '@/auth/decorators/roles.decorator';
 
 @ApiTags('Clientes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('clients')
+@Roles('ABOGADO')
 export class ClientesController {
   constructor(private readonly service: ClientesService) {}
 

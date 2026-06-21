@@ -31,7 +31,8 @@ export default function LoginPage() {
     try {
       const res = await authApi.login(data);
       setAuth(res.data.user, res.data.accessToken);
-      router.push('/dashboard');
+      const destino = res.data.user.role === 'ABOGADO' ? '/dashboard' : '/portal';
+      router.push(destino);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Error al iniciar sesión');
     }

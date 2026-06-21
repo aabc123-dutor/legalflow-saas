@@ -15,20 +15,21 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { authApi } from '@/lib/api';
 
-const NAV = [
-  { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard },
-  { href: '/dashboard/expedientes', label: 'Expedientes', icon: FolderOpen },
-  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
-  { href: '/dashboard/documentos', label: 'Documentos', icon: FileText },
-  { href: '/dashboard/facturas', label: 'Facturación', icon: Receipt },
-  { href: '/dashboard/fiscal', label: 'Dashboard Fiscal', icon: Calculator },
-  { href: '/dashboard/ai', label: 'Asistente Legal', icon: Bot },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
   const { user, clearAuth } = useAuthStore();
   const router = useRouter();
+
+const NAV = [
+  
+  { href: '/dashboard', label: 'Inicio', icon: LayoutDashboard, roles: ['ABOGADO', 'CLIENTE'] },
+  { href: '/dashboard/expedientes', label: 'Expedientes', icon: FolderOpen, roles: ['ABOGADO'] },
+  { href: '/dashboard/clientes', label: 'Clientes', icon: Users, roles: ['ABOGADO'] },
+  { href: '/dashboard/documentos', label: 'Documentos', icon: FileText , roles: ['ABOGADO']},
+  { href: '/dashboard/facturas', label: 'Facturación', icon: Receipt , roles: ['ABOGADO']},
+  { href: '/dashboard/fiscal', label: 'Dashboard Fiscal', icon: Calculator, roles: ['ABOGADO'] },
+  { href: '/dashboard/ai', label: 'Asistente Legal', icon: Bot, roles: ['ABOGADO'] },
+].filter((item) => item.roles.includes(user?.role ?? ''));
 
   const handleLogout = async () => {
     try {

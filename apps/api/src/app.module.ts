@@ -12,6 +12,9 @@ import { FacturasModule } from './facturas/facturas.module';
 import { FiscalModule } from './fiscal/fiscal.module';
 import { AiModule } from './ai/ai.module';
 import { RedisModule } from './common/redis/redis.module';
+import { APP_GUARD } from '@nestjs/core';
+import { RolesGuard } from './auth/guards/roles.guard';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -45,5 +48,16 @@ import { RedisModule } from './common/redis/redis.module';
     FiscalModule,
     AiModule,
   ],
+
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
+  ],
 })
-export class AppModule {}
+export class AppModule { }
