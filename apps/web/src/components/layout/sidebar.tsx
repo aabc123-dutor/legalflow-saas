@@ -57,11 +57,10 @@ export function Sidebar() {
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm transition-colors border-l-2 ${
-                active
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm transition-colors border-l-2 ${active
                   ? 'bg-white/10 text-white font-medium border-gold-500'
                   : 'border-transparent text-white/60 hover:text-white hover:bg-white/5'
-              }`}
+                }`}
             >
               <Icon className="w-4 h-4" />
               {label}
@@ -74,11 +73,11 @@ export function Sidebar() {
         <div className="flex items-center gap-3 mb-3">
           <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center">
             <span className="text-white text-xs font-bold">
-              {user?.nombre?.[0]?.toUpperCase() ?? 'U'}
+              {user?.nombre?.[0]?.toUpperCase() ?? ''}{user?.apellidos?.[0]?.toUpperCase() ?? ''}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{user?.nombre}</p>
+            <p className="text-white text-sm font-medium truncate">{user?.nombre} {user?.apellidos}</p>
             <p className="text-white/50 text-xs truncate">{user?.plan}</p>
           </div>
         </div>

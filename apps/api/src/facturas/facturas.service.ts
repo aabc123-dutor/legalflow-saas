@@ -6,14 +6,14 @@ export class FacturasService {
   constructor(private prisma: PrismaService) {}
 
   findAll(usuarioId: string) {
-    return this.prisma.facturas.findMany({
+    return this.prisma.factura.findMany({
       where: { usuarioId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: string, usuarioId: string) {
-    const item = await this.prisma.facturas.findFirst({
+    const item = await this.prisma.factura.findFirst({
       where: { id, usuarioId },
     });
     if (!item) throw new NotFoundException('Factura no encontrado/a');
@@ -21,16 +21,16 @@ export class FacturasService {
   }
 
   create(usuarioId: string, data: any) {
-    return this.prisma.facturas.create({ data: { ...data, usuarioId } });
+    return this.prisma.factura.create({ data: { ...data, usuarioId } });
   }
 
   async update(id: string, usuarioId: string, data: any) {
     await this.findOne(id, usuarioId);
-    return this.prisma.facturas.update({ where: { id }, data });
+    return this.prisma.factura.update({ where: { id }, data });
   }
 
   async remove(id: string, usuarioId: string) {
     await this.findOne(id, usuarioId);
-    return this.prisma.facturas.delete({ where: { id } });
+    return this.prisma.factura.delete({ where: { id } });
   }
 }

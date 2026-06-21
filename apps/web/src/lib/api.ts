@@ -1,35 +1,37 @@
 import axios from 'axios';
+import { useAuthStore } from '@/store/auth.store';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
 export const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // send cookies (refresh token)
+  withCredentials: true, // envía la cookie refreshToken automáticamente
 });
 
-// Inject access token from localStorage on every request
+// Lee el accessToken del store de Zustand (memoria), no de localStorage
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('accessToken');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-  }
+  const token = useAuthStore.getState().accessToken 
+    ?? (typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null);
+  if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Handle 401 → refresh token → retry
+// Si el accessToken expira (401), lo renueva con el refreshToken (cookie HttpOnly)
+// y reintenta la petición original de forma transparente
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
+    console.log('interceptor error:', error.response?.status, error.config?.url);
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && !original._retry && !original.url.includes('/auth/login'))  {
       original._retry = true;
       try {
         const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
-        localStorage.setItem('accessToken', data.accessToken);
+        useAuthStore.getState().setAuth(useAuthStore.getState().user!, data.accessToken);
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(original);
       } catch {
-        localStorage.removeItem('accessToken');
+        useAuthStore.getState().clearAuth();
         window.location.href = '/login';
       }
     }
@@ -44,6 +46,7 @@ export const authApi = {
   login: (data: any) => api.post('/auth/login', data),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  refresh: () => api.post('/auth/refresh'),
 };
 
 export const expedientesApi = {

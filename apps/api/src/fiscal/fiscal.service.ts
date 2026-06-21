@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { Decimal } from '@prisma/client/runtime/library';
 
-interface TrimestralAggregate {
+export interface TrimestralAggregate {
   trimestre: number;
   anio: number;
   baseImponible: number;

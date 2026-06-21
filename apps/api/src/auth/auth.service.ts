@@ -9,6 +9,9 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { RegisterDto, LoginDto } from './dto/auth.dto';
+import { Inject } from '@nestjs/common';
+import { REDIS_CLIENT } from '../common/redis/redis.module';
+import type Redis from 'ioredis';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +19,8 @@ export class AuthService {
     private prisma: PrismaService,
     private jwt: JwtService,
     private config: ConfigService,
-  ) {}
+    @Inject(REDIS_CLIENT) private redis: Redis,
+  ) { }
 
   async register(dto: RegisterDto) {
     const existing = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
@@ -59,11 +63,14 @@ export class AuthService {
   }
 
   async refresh(userId: string, refreshToken: string) {
-    const user = await this.prisma.usuario.findUnique({ where: { id: userId } });
-    if (!user?.refreshTokenHash) throw new ForbiddenException('Acceso denegado');
+    const hash = await this.redis.get(`refresh:${userId}`);
+    if (!hash) throw new ForbiddenException('Acceso denegado');
 
-    const valid = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    const valid = await bcrypt.compare(refreshToken, hash);
     if (!valid) throw new ForbiddenException('Token de refresco inválido');
+
+    const user = await this.prisma.usuario.findUnique({ where: { id: userId } });
+    if (!user) throw new ForbiddenException('Acceso denegado');
 
     const tokens = await this.generateTokens(user.id, user.email);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
@@ -71,10 +78,7 @@ export class AuthService {
   }
 
   async logout(userId: string) {
-    await this.prisma.usuario.update({
-      where: { id: userId },
-      data: { refreshTokenHash: null },
-    });
+    await this.redis.del(`refresh:${userId}`);
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -95,12 +99,16 @@ export class AuthService {
 
     return { accessToken, refreshToken };
   }
-
   private async saveRefreshToken(userId: string, refreshToken: string) {
     const hash = await bcrypt.hash(refreshToken, 10);
-    await this.prisma.usuario.update({
+    const ttl = 60 * 60 * 24 * 7; // 7 días en segundos
+    await this.redis.set(`refresh:${userId}`, hash, 'EX', ttl);
+  }
+
+  async getMe(userId: string) {
+    return this.prisma.usuario.findUnique({
       where: { id: userId },
-      data: { refreshTokenHash: hash },
+      select: { id: true, email: true, nombre: true, apellidos: true, role: true, plan: true },
     });
   }
 }

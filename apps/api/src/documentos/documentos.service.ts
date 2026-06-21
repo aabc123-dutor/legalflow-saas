@@ -6,14 +6,14 @@ export class DocumentosService {
   constructor(private prisma: PrismaService) {}
 
   findAll(usuarioId: string) {
-    return this.prisma.documentos.findMany({
+    return this.prisma.documento.findMany({
       where: { usuarioId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   async findOne(id: string, usuarioId: string) {
-    const item = await this.prisma.documentos.findFirst({
+    const item = await this.prisma.documento.findFirst({
       where: { id, usuarioId },
     });
     if (!item) throw new NotFoundException('Documento no encontrado/a');
@@ -21,16 +21,16 @@ export class DocumentosService {
   }
 
   create(usuarioId: string, data: any) {
-    return this.prisma.documentos.create({ data: { ...data, usuarioId } });
+    return this.prisma.documento.create({ data: { ...data, usuarioId } });
   }
 
   async update(id: string, usuarioId: string, data: any) {
     await this.findOne(id, usuarioId);
-    return this.prisma.documentos.update({ where: { id }, data });
+    return this.prisma.documento.update({ where: { id }, data });
   }
 
   async remove(id: string, usuarioId: string) {
     await this.findOne(id, usuarioId);
-    return this.prisma.documentos.delete({ where: { id } });
+    return this.prisma.documento.delete({ where: { id } });
   }
 }

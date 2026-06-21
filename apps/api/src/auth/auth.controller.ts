@@ -27,7 +27,7 @@ const COOKIE_OPTS = {
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('register')
   async register(@Body() dto: RegisterDto) {
@@ -66,8 +66,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   async me(@CurrentUser() user: { sub: string; email: string }) {
-    return user;
+    return this.authService.getMe(user.sub);
   }
 }

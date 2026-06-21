@@ -23,19 +23,22 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       setAuth: (user, accessToken) => {
         if (typeof window !== 'undefined') {
-          localStorage.setItem('accessToken', accessToken);
+          sessionStorage.setItem('accessToken', accessToken);
         }
         set({ user, accessToken });
       },
       clearAuth: () => {
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('accessToken');
+          sessionStorage.removeItem('accessToken');
         }
         set({ user: null, accessToken: null });
       },
     }),
     {
       name: 'legalflow-auth',
+      // Solo persistimos el usuario (datos no sensibles). El accessToken vive
+      // solo en memoria: se pierde al cerrar la pestaña y el interceptor de
+      // axios lo renueva automáticamente via refresh token (HttpOnly cookie).
       partialize: (state) => ({ user: state.user }),
     },
   ),
