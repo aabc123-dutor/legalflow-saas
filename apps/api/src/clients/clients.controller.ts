@@ -4,6 +4,8 @@ import { ClientesService } from './clients.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '@/auth/decorators/roles.decorator';
+import { CreateClienteDto, UpdateClienteDto } from './dto/cliente.dto';
+
 
 @ApiTags('Clientes')
 @ApiBearerAuth()
@@ -11,7 +13,7 @@ import { Roles } from '@/auth/decorators/roles.decorator';
 @Controller('clients')
 @Roles('ABOGADO')
 export class ClientesController {
-  constructor(private readonly service: ClientesService) {}
+  constructor(private readonly service: ClientesService) { }
 
   @Get()
   findAll(@CurrentUser() user: { sub: string }) {
@@ -23,18 +25,18 @@ export class ClientesController {
     return this.service.findOne(id, user.sub);
   }
 
+  @Delete(':id')
+  remove(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
+    return this.service.remove(id, user.sub);
+  }
+
   @Post()
-  create(@Body() body: any, @CurrentUser() user: { sub: string }) {
+  create(@Body() body: CreateClienteDto, @CurrentUser() user: { sub: string }) {
     return this.service.create(user.sub, body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any, @CurrentUser() user: { sub: string }) {
+  update(@Param('id') id: string, @Body() body: UpdateClienteDto, @CurrentUser() user: { sub: string }) {
     return this.service.update(id, user.sub, body);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.remove(id, user.sub);
   }
 }

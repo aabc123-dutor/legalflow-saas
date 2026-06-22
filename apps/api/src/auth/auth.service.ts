@@ -138,4 +138,18 @@ export class AuthService {
 
     await this.redis.del(`reset:${token}`);
   }
+
+  async activarCuenta(token: string, password: string) {
+    const email = await this.redis.get(`invite:${token}`);
+    if (!email) throw new ForbiddenException('Token inválido o expirado');
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await this.prisma.usuario.update({
+      where: { email },
+      data: { passwordHash, active: true },
+    });
+
+    await this.redis.del(`invite:${token}`);
+  }
 }
