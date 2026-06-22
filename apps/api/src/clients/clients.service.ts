@@ -1,9 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
+import { EmailService } from '../common/email/email.service';
+import { CreateClienteDto, UpdateClienteDto } from './dto/cliente.dto';
+import { Inject } from '@nestjs/common';
+import { REDIS_CLIENT } from '../common/redis/redis.module';
+import type Redis from 'ioredis';
+import * as crypto from 'crypto';
 
 @Injectable()
 export class ClientesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private email: EmailService,
+    @Inject(REDIS_CLIENT) private redis: Redis,
+  ) {}
 
   findAll(usuarioId: string) {
     return this.prisma.cliente.findMany({
@@ -16,15 +26,46 @@ export class ClientesService {
     const item = await this.prisma.cliente.findFirst({
       where: { id, usuarioId },
     });
-    if (!item) throw new NotFoundException('Cliente no encontrado/a');
+    if (!item) throw new NotFoundException('Cliente no encontrado');
     return item;
   }
 
-  create(usuarioId: string, data: any) {
-    return this.prisma.cliente.create({ data: { ...data, usuarioId } });
+  async create(usuarioId: string, data: CreateClienteDto) {
+    // Crear el registro de cliente
+    const cliente = await this.prisma.cliente.create({
+      data: { ...data, usuarioId },
+    });
+
+    // Si tiene email, crear usuario inactivo y enviar invitación
+    if (data.email) {
+      const existing = await this.prisma.usuario.findUnique({
+        where: { email: data.email },
+      });
+
+      if (!existing) {
+        await this.prisma.usuario.create({
+          data: {
+            email: data.email,
+            nombre: data.nombre,
+            apellidos: data.apellidos ?? '',
+            passwordHash: '',
+            role: 'CLIENTE',
+            active: false,
+          },
+        });
+
+        const token = crypto.randomUUID();
+        const ttl = 60 * 60 * 48; // 48 horas
+        await this.redis.set(`invite:${token}`, data.email, 'EX', ttl);
+
+        await this.email.sendInvitation(data.email, data.nombre, token);
+      }
+    }
+
+    return cliente;
   }
 
-  async update(id: string, usuarioId: string, data: any) {
+  async update(id: string, usuarioId: string, data: UpdateClienteDto) {
     await this.findOne(id, usuarioId);
     return this.prisma.cliente.update({ where: { id }, data });
   }

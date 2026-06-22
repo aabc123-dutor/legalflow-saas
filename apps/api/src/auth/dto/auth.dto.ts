@@ -49,3 +49,12 @@ export class ResetPasswordDto {
   @MinLength(8)
   password: string;
 }
+
+export class ActivarCuentaDto {
+  @IsString()
+  token: string;
+
+  @IsString()
+  @MinLength(8)
+  password: string;
+}

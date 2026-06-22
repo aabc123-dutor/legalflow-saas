@@ -9,7 +9,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, accessToken, setAuth, clearAuth } = useAuthStore();
   const [checking, setChecking] = useState(true);
-  console.log('AuthGuard:', { user, accessToken, checking });
   useEffect(() => {
     if (accessToken) {
       setChecking(false);
@@ -34,9 +33,6 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
         }
       });
   }, [accessToken, setAuth, clearAuth, router]);
-
-
-  console.log('AuthGuard state:', { checking, user, accessToken });
 
   if (checking) return null;
   if (!user) return null;

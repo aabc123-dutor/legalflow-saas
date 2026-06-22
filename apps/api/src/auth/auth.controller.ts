@@ -17,6 +17,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
+import { ActivarCuentaDto } from './dto/auth.dto';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -86,5 +87,12 @@ export class AuthController {
     const result = await this.authService.login(dto);
     res.cookie('refreshToken', result.refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });
     return { user: result.user, accessToken: result.accessToken };
+  }
+
+  @Public()
+  @Post('activar-cuenta')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async activarCuenta(@Body() dto: ActivarCuentaDto) {
+    await this.authService.activarCuenta(dto.token, dto.password);
   }
 }
