@@ -55,6 +55,16 @@ export const expedientesApi = {
   create: (data: any) => api.post('/expedientes', data),
   update: (id: string, data: any) => api.patch(`/expedientes/${id}`, data),
   delete: (id: string) => api.delete(`/expedientes/${id}`),
+
+  createHito: (expedienteId: string, data: any) => api.post(`/expedientes/${expedienteId}/hitos`, data),
+  updateHito: (hitoId: string, data: any) => api.patch(`/expedientes/hitos/${hitoId}`, data),
+  deleteHito: (hitoId: string) => api.delete(`/expedientes/hitos/${hitoId}`),
+
+  createNota: (expedienteId: string, data: any) => api.post(`/expedientes/${expedienteId}/notas`, data),
+  updateNota: (notaId: string, data: any) => api.patch(`/expedientes/notas/${notaId}`, data),
+  deleteNota: (notaId: string) => api.delete(`/expedientes/notas/${notaId}`),
+
+  proximosHitos: () => api.get('/expedientes/hitos/proximos'),
 };
 
 export const clientesApi = {
@@ -88,3 +98,5 @@ export const aiApi = {
   conversaciones: (tipo?: string) => api.get('/ai/conversaciones', { params: { tipo } }),
   conversacion: (id: string) => api.get(`/ai/conversaciones/${id}`),
 };
+
+
