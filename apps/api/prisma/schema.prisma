@@ -137,6 +137,8 @@ model Expediente {
   documentos Documento[]
   facturas   Factura[]
   suplidos   Suplido[]
+  hitos      Hito[]
+  notas      Nota[]
 
   @@index([clienteId, estado])
   @@map("expedientes")
@@ -302,4 +304,30 @@ model AuditLog {
   @@index([usuarioId, createdAt])
   @@index([entidad, entidadId])
   @@map("audit_logs")
+}
+
+model Hito {
+  id           String     @id @default(uuid())
+  expedienteId String     @map("expediente_id")
+  titulo       String
+  descripcion  String?
+  fecha        DateTime
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  @@index([expedienteId, fecha])
+  @@map("hitos")
+}
+
+model Nota {
+  id           String     @id @default(uuid())
+  expedienteId String     @map("expediente_id")
+  contenido    String
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+
+  @@index([expedienteId])
+  @@map("notas")
 }
