@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const { data: expedientes } = useQuery({ queryKey: ['expedientes'], queryFn: () => expedientesApi.list().then((r) => r.data) });
   const { data: clientes } = useQuery({ queryKey: ['clientes'], queryFn: () => clientesApi.list().then((r) => r.data) });
   const { data: facturas } = useQuery({ queryKey: ['facturas'], queryFn: () => facturasApi.list().then((r) => r.data) });
+  const { data: hitos } = useQuery({ queryKey: ['hitos-proximos'], queryFn: () => expedientesApi.proximosHitos().then((r) => r.data) });
 
   const totalFacturado = facturas?.filter((f: any) => f.estado === 'PAGADA').reduce((s: number, f: any) => s + Number(f.total), 0) ?? 0;
 
@@ -55,6 +56,36 @@ export default function DashboardPage() {
           {!expedientes?.length && (
             <div className="px-6 py-8 text-center text-gray-400 text-sm">
               Aún no tienes expedientes. <a href="/dashboard/expedientes" className="text-brand-600 hover:underline">Crear uno</a>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Próximos hitos */}
+      <div className="bg-white rounded-xl border mt-4">
+        <div className="px-6 py-4 border-b">
+          <h2 className="font-semibold text-gray-900">Próximos hitos</h2>
+        </div>
+        <div className="divide-y">
+          {hitos?.map((h: any) => {
+            const diasRestantes = Math.ceil((new Date(h.fecha).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+            return (
+              <div key={h.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50">
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">{h.titulo}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{h.expediente.titulo}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-700">{new Date(h.fecha).toLocaleDateString('es-ES')}</p>
+                  <p className={`text-xs mt-0.5 ${diasRestantes <= 3 ? 'text-red-500' : 'text-gray-400'}`}>
+                    {diasRestantes === 0 ? 'Hoy' : `En ${diasRestantes} día${diasRestantes !== 1 ? 's' : ''}`}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+          {!hitos?.length && (
+            <div className="px-6 py-8 text-center text-gray-400 text-sm">
+              No hay hitos próximos.
             </div>
           )}
         </div>
