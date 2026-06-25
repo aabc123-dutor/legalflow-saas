@@ -23,7 +23,6 @@ enum PlanUsuario {
   ENTERPRISE
 }
 
-
 enum EstadoExpediente {
   ABIERTO
   EN_CURSO
@@ -64,32 +63,60 @@ enum TipoAuditLog {
   DOWNLOAD
 }
 
+enum RolDespacho {
+  OWNER
+  MIEMBRO
+}
+
 // ─── Usuario ────────────────────────────────────────────────────────────────
 
+model Despacho {
+  id        String      @id @default(uuid())
+  nombre    String
+  plan      PlanUsuario @default(FREE)
+  activo    Boolean     @default(true)
+  createdAt DateTime    @default(now()) @map("created_at")
+  updatedAt DateTime    @updatedAt @map("updated_at")
+
+  usuarios       Usuario[]
+  clientes       Cliente[]
+  expedientes    Expediente[]
+  facturas       Factura[]
+  documentos     Documento[]
+  conversaciones Conversacion[]
+  usageEvents    UsageEvent[]
+
+  @@map("despachos")
+}
+
 model Usuario {
-  id                String    @id @default(uuid())
-  email             String    @unique
-  passwordHash      String    @map("password_hash")
-  nombre            String
-  apellidos         String
-  role              RolUsuario  @default(CLIENTE)
-  plan              PlanUsuario  @default(FREE)
-  active            Boolean   @default(true)
-  emailVerified     Boolean   @default(false) @map("email_verified")
-  lastLoginAt       DateTime? @map("last_login_at")
-  createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt         DateTime  @updatedAt @map("updated_at")
+  id            String       @id @default(uuid())
+  email         String       @unique
+  passwordHash  String       @map("password_hash")
+  nombre        String
+  apellidos     String
+  role          RolUsuario   @default(CLIENTE)
+  plan          PlanUsuario  @default(FREE)
+  active        Boolean      @default(true)
+  emailVerified Boolean      @default(false) @map("email_verified")
+  lastLoginAt   DateTime?    @map("last_login_at")
+  despachoId    String?      @map("despacho_id")
+  rolDespacho   RolDespacho? @default(OWNER) @map("rol_despacho")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
 
   // Fiscal config
   configuracionFiscal ConfiguracionFiscal?
 
   // Relations
-  clientes       Cliente[]
-  expedientes    Expediente[]
-  documentos     Documento[]
-  facturas       Factura[]
-  conversaciones Conversacion[]
-  auditLogs      AuditLog[]
+  despacho        Despacho?      @relation(fields: [despachoId], references: [id])
+  clientesCreados Cliente[]      @relation("ClienteCreadoPor")
+  clientePropio   Cliente?       @relation("ClienteUsuario")
+  expedientes     Expediente[]
+  documentos      Documento[]
+  facturas        Factura[]
+  conversaciones  Conversacion[]
+  auditLogs       AuditLog[]
 
   @@map("usuarios")
 }
@@ -98,7 +125,9 @@ model Usuario {
 
 model Cliente {
   id          String   @id @default(uuid())
-  usuarioId   String   @map("usuario_id")
+  despachoId  String   @map("despacho_id")
+  creadoPorId String   @map("creado_por_id")
+  usuarioId   String?  @unique @map("usuario_id")
   nombre      String
   apellidos   String?
   email       String?
@@ -111,28 +140,32 @@ model Cliente {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  usuario     Usuario      @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  despacho    Despacho     @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor   Usuario      @relation("ClienteCreadoPor", fields: [creadoPorId], references: [id])
+  usuario     Usuario?     @relation("ClienteUsuario", fields: [usuarioId], references: [id])
   expedientes Expediente[]
 
-  @@index([usuarioId])
+  @@index([despachoId])
   @@map("clientes")
 }
 
 // ─── Expediente ───────────────────────────────────────────────────────────────
 
 model Expediente {
-  id          String           @id @default(uuid())
-  usuarioId   String           @map("usuario_id")
-  clienteId   String           @map("cliente_id")
-  titulo      String
-  descripcion String?
-  estado      EstadoExpediente @default(ABIERTO)
-  fechaApertura DateTime       @default(now()) @map("fecha_apertura")
-  fechaCierre   DateTime?      @map("fecha_cierre")
-  createdAt   DateTime         @default(now()) @map("created_at")
-  updatedAt   DateTime         @updatedAt @map("updated_at")
+  id            String           @id @default(uuid())
+  despachoId    String           @map("despacho_id")
+  creadoPorId   String           @map("creado_por_id")
+  clienteId     String           @map("cliente_id")
+  titulo        String
+  descripcion   String?
+  estado        EstadoExpediente @default(ABIERTO)
+  fechaApertura DateTime         @default(now()) @map("fecha_apertura")
+  fechaCierre   DateTime?        @map("fecha_cierre")
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
 
-  usuario    Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  despacho   Despacho    @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor  Usuario     @relation(fields: [creadoPorId], references: [id])
   cliente    Cliente     @relation(fields: [clienteId], references: [id])
   documentos Documento[]
   facturas   Factura[]
@@ -148,7 +181,8 @@ model Expediente {
 
 model Documento {
   id           String        @id @default(uuid())
-  usuarioId    String        @map("usuario_id")
+  despachoId   String        @map("despacho_id")
+  creadoPorId  String        @map("creado_por_id")
   expedienteId String        @map("expediente_id")
   suplidoId    String?       @map("suplido_id")
   facturaId    String?       @map("factura_id")
@@ -164,10 +198,11 @@ model Documento {
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
 
-  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  despacho   Despacho   @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor  Usuario    @relation(fields: [creadoPorId], references: [id])
   expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
-  suplido Suplido? @relation(fields: [suplidoId], references: [id])
-  factura Factura? 
+  suplido    Suplido?   @relation(fields: [suplidoId], references: [id])
+  factura    Factura?
 
   @@index([expedienteId])
   @@map("documentos")
@@ -176,46 +211,48 @@ model Documento {
 // ─── Factura ──────────────────────────────────────────────────────────────────
 
 model Factura {
-  id              String        @id @default(uuid())
-  usuarioId       String        @map("usuario_id")
-  expedienteId    String        @map("expediente_id")
-  numero          String
-  estado          EstadoFactura @default(BORRADOR)
-  fechaEmision    DateTime      @map("fecha_emision")
-  fechaVencimiento DateTime?    @map("fecha_vencimiento")
-  baseImponible   Decimal       @map("base_imponible") @db.Decimal(12, 2)
-  tipoIva         Decimal       @default(21) @map("tipo_iva") @db.Decimal(5, 2)
-  cuotaIva        Decimal       @map("cuota_iva") @db.Decimal(12, 2)
-  tipoIrpf        Decimal       @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
-  cuotaIrpf       Decimal       @map("cuota_irpf") @db.Decimal(12, 2)
-  total           Decimal       @db.Decimal(12, 2)
-  notas           String?
-  documentoId String?    @unique @map("documento_id")
-  createdAt       DateTime      @default(now()) @map("created_at")
-  updatedAt       DateTime      @updatedAt @map("updated_at")
+  id               String        @id @default(uuid())
+  despachoId       String        @map("despacho_id")
+  creadoPorId      String        @map("creado_por_id")
+  expedienteId     String        @map("expediente_id")
+  numero           String
+  estado           EstadoFactura @default(BORRADOR)
+  fechaEmision     DateTime      @map("fecha_emision")
+  fechaVencimiento DateTime?     @map("fecha_vencimiento")
+  baseImponible    Decimal       @map("base_imponible") @db.Decimal(12, 2)
+  tipoIva          Decimal       @default(21) @map("tipo_iva") @db.Decimal(5, 2)
+  cuotaIva         Decimal       @map("cuota_iva") @db.Decimal(12, 2)
+  tipoIrpf         Decimal       @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
+  cuotaIrpf        Decimal       @map("cuota_irpf") @db.Decimal(12, 2)
+  total            Decimal       @db.Decimal(12, 2)
+  notas            String?
+  documentoId      String?       @unique @map("documento_id")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
 
-  usuario    Usuario    @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  despacho   Despacho   @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor  Usuario    @relation(fields: [creadoPorId], references: [id])
   expediente Expediente @relation(fields: [expedienteId], references: [id])
-  documento   Documento? @relation(fields: [documentoId], references: [id])
+  documento  Documento? @relation(fields: [documentoId], references: [id])
   suplidos   Suplido[]
 
-  @@unique([usuarioId, numero])
-  @@index([usuarioId, fechaEmision(sort: Asc)])
+  @@unique([despachoId, numero])
+  @@index([despachoId, fechaEmision(sort: Asc)])
   @@map("facturas")
 }
 
 // ─── Suplido ──────────────────────────────────────────────────────────────────
 
 model Suplido {
-  id          String    @id @default(uuid())
-  facturaId   String?   @map("factura_id")
+  id           String   @id @default(uuid())
+  facturaId    String?  @map("factura_id")
   expedienteId String   @map("expediente_id")
-  concepto    String
-  importe     Decimal   @db.Decimal(12, 2)
-  createdAt   DateTime  @default(now()) @map("created_at")
+  concepto     String
+  importe      Decimal  @db.Decimal(12, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  factura Factura? @relation(fields: [facturaId], references: [id])
-  expediente Expediente @relation(fields: [expedienteId], references: [id])
+  factura    Factura?    @relation(fields: [facturaId], references: [id])
+  expediente Expediente  @relation(fields: [expedienteId], references: [id])
   documentos Documento[]
 
   @@map("suplidos")
@@ -224,15 +261,15 @@ model Suplido {
 // ─── ConfiguracionFiscal ─────────────────────────────────────────────────────
 
 model ConfiguracionFiscal {
-  id              String   @id @default(uuid())
-  usuarioId       String   @unique @map("usuario_id")
-  tipoIva         Decimal  @default(21) @map("tipo_iva") @db.Decimal(5, 2)
-  tipoIrpf        Decimal  @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
+  id               String   @id @default(uuid())
+  usuarioId        String   @unique @map("usuario_id")
+  tipoIva          Decimal  @default(21) @map("tipo_iva") @db.Decimal(5, 2)
+  tipoIrpf         Decimal  @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
   nuevoProfesional Boolean  @default(false) @map("nuevo_profesional")
-  nif             String?
-  epigrafeCnae    String?  @map("epigrafe_cnae")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  nif              String?
+  epigrafeCnae     String?  @map("epigrafe_cnae")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -242,24 +279,26 @@ model ConfiguracionFiscal {
 // ─── Conversacion (chatbot history) ──────────────────────────────────────────
 
 model Conversacion {
-  id        String           @id @default(uuid())
-  usuarioId String           @map("usuario_id")
-  tipo      TipoConversacion
-  titulo    String?
-  createdAt DateTime         @default(now()) @map("created_at")
-  updatedAt DateTime         @updatedAt @map("updated_at")
+  id          String           @id @default(uuid())
+  despachoId  String           @map("despacho_id")
+  creadoPorId String           @map("creado_por_id")
+  tipo        TipoConversacion
+  titulo      String?
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
-  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  mensajes Mensaje[]
+  despacho  Despacho  @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor Usuario   @relation(fields: [creadoPorId], references: [id])
+  mensajes  Mensaje[]
 
-  @@index([usuarioId, tipo])
+  @@index([despachoId, tipo])
   @@map("conversaciones")
 }
 
 model Mensaje {
   id             String   @id @default(uuid())
   conversacionId String   @map("conversacion_id")
-  role           String   // 'user' | 'assistant'
+  role           String // 'user' | 'assistant'
   content        String   @db.Text
   createdAt      DateTime @default(now()) @map("created_at")
 
@@ -271,17 +310,17 @@ model Mensaje {
 // ─── JurisprudenciaBase ───────────────────────────────────────────────────────
 
 model JurisprudenciaBase {
-  id          String   @id @default(uuid())
-  titulo      String
-  resumen     String   @db.Text
-  tribunal    String?
-  fecha       DateTime?
-  url         String?
-  contenido   String   @db.Text
+  id        String    @id @default(uuid())
+  titulo    String
+  resumen   String    @db.Text
+  tribunal  String?
+  fecha     DateTime?
+  url       String?
+  contenido String    @db.Text
   // embedding stored as JSON array (use pgvector extension for proper vector search)
-  embedding   Json?
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  embedding Json?
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("jurisprudencia_base")
 }
@@ -289,15 +328,15 @@ model JurisprudenciaBase {
 // ─── AuditLog ─────────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id         String       @id @default(uuid())
-  usuarioId  String?      @map("usuario_id")
-  accion     TipoAuditLog
-  entidad    String
-  entidadId  String?      @map("entidad_id")
-  detalle    Json?
-  ip         String?
-  userAgent  String?      @map("user_agent")
-  createdAt  DateTime     @default(now()) @map("created_at")
+  id        String       @id @default(uuid())
+  usuarioId String?      @map("usuario_id")
+  accion    TipoAuditLog
+  entidad   String
+  entidadId String?      @map("entidad_id")
+  detalle   Json?
+  ip        String?
+  userAgent String?      @map("user_agent")
+  createdAt DateTime     @default(now()) @map("created_at")
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
 
@@ -307,27 +346,50 @@ model AuditLog {
 }
 
 model Hito {
-  id           String     @id @default(uuid())
-  expedienteId String     @map("expediente_id")
+  id           String   @id @default(uuid())
+  expedienteId String   @map("expediente_id")
   titulo       String
   descripcion  String?
   fecha        DateTime
-  createdAt    DateTime   @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
 
   @@index([expedienteId, fecha])
   @@map("hitos")
 }
 
 model Nota {
-  id           String     @id @default(uuid())
-  expedienteId String     @map("expediente_id")
+  id           String   @id @default(uuid())
+  expedienteId String   @map("expediente_id")
   contenido    String
-  createdAt    DateTime   @default(now()) @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  expediente   Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
+  expediente Expediente @relation(fields: [expedienteId], references: [id], onDelete: Cascade)
 
   @@index([expedienteId])
   @@map("notas")
+}
+
+model UsageEvent {
+  id         String   @id @default(uuid())
+  despachoId String   @map("despacho_id")
+  eventType  String   @map("event_type") // "expediente.created", "ai.call", "document.uploaded"
+  quantity   Int      @default(1)
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  despacho Despacho @relation(fields: [despachoId], references: [id])
+
+  @@index([despachoId, eventType, createdAt])
+  @@map("usage_events")
+}
+
+model PlanLimit {
+  plan            PlanUsuario @id
+  maxExpedientes  Int         @map("max_expedientes")
+  maxAiCallsMonth Int         @map("max_ai_calls_month")
+  maxStorageMb    Int         @map("max_storage_mb")
+
+  @@map("plan_limits")
 }

@@ -16,18 +16,18 @@ export class AiService {
 
   // ── Chatbot de navegación ──────────────────────────────────────────────────
 
-  async navegacionChat(usuarioId: string, conversacionId: string | null, message: string) {
+  async navegacionChat(despachoId: string, creadoPorId:string, conversacionId: string | null, message: string) {
     // Get or create conversation
     let conv = conversacionId
       ? await this.prisma.conversacion.findFirst({
-          where: { id: conversacionId, usuarioId },
+          where: { id: conversacionId, despachoId, creadoPorId },
           include: { mensajes: { orderBy: { createdAt: 'asc' } } },
         })
       : null;
 
     if (!conv) {
       conv = await this.prisma.conversacion.create({
-        data: { usuarioId, tipo: 'NAVEGACION', titulo: message.slice(0, 60) },
+        data: { despachoId, creadoPorId, tipo: 'NAVEGACION', titulo: message.slice(0, 60) },
         include: { mensajes: true },
       });
     }
@@ -66,7 +66,7 @@ Funcionalidades disponibles: Expedientes, Clientes, Documentos, Facturación, Da
 
   // ── Chatbot de jurisprudencia (RAG) ───────────────────────────────────────
 
-  async jurisprudenciaChat(usuarioId: string, conversacionId: string | null, query: string) {
+  async jurisprudenciaChat(despachoId: string, creadoPorId: string, conversacionId: string | null, query: string) {
     // Retrieve relevant jurisprudence (simplified — use pgvector for production)
     const relevant = await this.prisma.jurisprudenciaBase.findMany({
       where: {
@@ -85,14 +85,14 @@ Funcionalidades disponibles: Expedientes, Clientes, Documentos, Facturación, Da
     // Get or create conversation
     let conv = conversacionId
       ? await this.prisma.conversacion.findFirst({
-          where: { id: conversacionId, usuarioId },
+          where: { id: conversacionId, despachoId, creadoPorId },
           include: { mensajes: { orderBy: { createdAt: 'asc' } } },
         })
       : null;
 
     if (!conv) {
       conv = await this.prisma.conversacion.create({
-        data: { usuarioId, tipo: 'JURISPRUDENCIA', titulo: query.slice(0, 60) },
+        data: { despachoId, creadoPorId,  tipo: 'JURISPRUDENCIA', titulo: query.slice(0, 60) },
         include: { mensajes: true },
       });
     }
@@ -138,17 +138,17 @@ ${context || 'No se encontraron documentos relevantes para esta consulta.'}`;
 
   // ── Historial de conversaciones ───────────────────────────────────────────
 
-  getConversaciones(usuarioId: string, tipo?: 'NAVEGACION' | 'JURISPRUDENCIA') {
+  getConversaciones(despachoId: string, creadoPorId:string, tipo?: 'NAVEGACION' | 'JURISPRUDENCIA') {
     return this.prisma.conversacion.findMany({
-      where: { usuarioId, ...(tipo && { tipo }) },
+      where: { despachoId, creadoPorId, ...(tipo && { tipo }) },
       orderBy: { updatedAt: 'desc' },
       select: { id: true, tipo: true, titulo: true, updatedAt: true },
     });
   }
 
-  getConversacion(id: string, usuarioId: string) {
+  getConversacion(id: string, despachoId: string, creadoPorId:string,) {
     return this.prisma.conversacion.findFirst({
-      where: { id, usuarioId },
+      where: { id, despachoId, creadoPorId },
       include: { mensajes: { orderBy: { createdAt: 'asc' } } },
     });
   }

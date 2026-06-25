@@ -10,17 +10,17 @@ import {
 export class ExpedientesService {
   constructor(private prisma: PrismaService) { }
 
-  findAll(usuarioId: string) {
+  findAll(despachoId: string) {
     return this.prisma.expediente.findMany({
-      where: { usuarioId },
+      where: { despachoId },
       include: { cliente: { select: { nombre: true, apellidos: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: string, usuarioId: string) {
+  async findOne(id: string, despachoId: string) {
     const item = await this.prisma.expediente.findFirst({
-      where: { id, usuarioId },
+      where: { id, despachoId },
       include: {
         cliente: { select: { id: true, nombre: true, apellidos: true, email: true } },
         hitos: { orderBy: { fecha: 'asc' } },
@@ -33,76 +33,76 @@ export class ExpedientesService {
     return item;
   }
 
-  create(usuarioId: string, data: CreateExpedienteDto) {
-    return this.prisma.expediente.create({ data: { ...data, usuarioId } });
+  create(despachoId: string, creadoPorId: string, data: CreateExpedienteDto) {
+    return this.prisma.expediente.create({ data: { ...data, despachoId, creadoPorId } });
   }
 
-  async update(id: string, usuarioId: string, data: UpdateExpedienteDto) {
-    await this.findOne(id, usuarioId);
+  async update(id: string, despachoId: string, data: UpdateExpedienteDto) {
+    await this.findOne(id, despachoId);
     return this.prisma.expediente.update({ where: { id }, data });
   }
 
-  async remove(id: string, usuarioId: string) {
-    await this.findOne(id, usuarioId);
+  async remove(id: string, despachoId: string) {
+    await this.findOne(id, despachoId);
     return this.prisma.expediente.delete({ where: { id } });
   }
 
   // Hitos
-  async createHito(expedienteId: string, usuarioId: string, data: CreateHitoDto) {
-    await this.findOne(expedienteId, usuarioId);
+  async createHito(expedienteId: string, despachoId: string, data: CreateHitoDto) {
+    await this.findOne(expedienteId, despachoId);
     return this.prisma.hito.create({ data: { ...data, fecha: new Date(data.fecha), expedienteId } });
   }
 
-  async updateHito(id: string, usuarioId: string, data: UpdateHitoDto) {
+  async updateHito(id: string, despachoId: string, data: UpdateHitoDto) {
     const hito = await this.prisma.hito.findFirst({
       where: { id },
-      include: { expediente: { select: { usuarioId: true } } },
+      include: { expediente: { select: { despachoId: true } } },
     });
-    if (!hito || hito.expediente.usuarioId !== usuarioId) throw new NotFoundException();
+    if (!hito || hito.expediente.despachoId !== despachoId) throw new NotFoundException();
     return this.prisma.hito.update({ where: { id }, data: { ...data, ...(data.fecha && { fecha: new Date(data.fecha) }) } });
   }
 
-  async removeHito(id: string, usuarioId: string) {
+  async removeHito(id: string, despachoId: string) {
     const hito = await this.prisma.hito.findFirst({
       where: { id },
-      include: { expediente: { select: { usuarioId: true } } },
+      include: { expediente: { select: { despachoId: true } } },
     });
-    if (!hito || hito.expediente.usuarioId !== usuarioId) throw new NotFoundException();
+    if (!hito || hito.expediente.despachoId !== despachoId) throw new NotFoundException();
     return this.prisma.hito.delete({ where: { id } });
   }
 
   // Notas
-  async createNota(expedienteId: string, usuarioId: string, data: CreateNotaDto) {
-    await this.findOne(expedienteId, usuarioId);
+  async createNota(expedienteId: string, despachoId: string, data: CreateNotaDto) {
+    await this.findOne(expedienteId, despachoId);
     return this.prisma.nota.create({ data: { ...data, expedienteId } });
   }
 
-  async updateNota(id: string, usuarioId: string, data: UpdateNotaDto) {
+  async updateNota(id: string, despachoId: string, data: UpdateNotaDto) {
     const nota = await this.prisma.nota.findFirst({
       where: { id },
-      include: { expediente: { select: { usuarioId: true } } },
+      include: { expediente: { select: { despachoId: true } } },
     });
-    if (!nota || nota.expediente.usuarioId !== usuarioId) throw new NotFoundException();
+    if (!nota || nota.expediente.despachoId !== despachoId) throw new NotFoundException();
     return this.prisma.nota.update({ where: { id }, data });
   }
 
-  async removeNota(id: string, usuarioId: string) {
+  async removeNota(id: string, despachoId: string) {
     const nota = await this.prisma.nota.findFirst({
       where: { id },
-      include: { expediente: { select: { usuarioId: true } } },
+      include: { expediente: { select: { despachoId: true } } },
     });
-    if (!nota || nota.expediente.usuarioId !== usuarioId) throw new NotFoundException();
+    if (!nota || nota.expediente.despachoId !== despachoId) throw new NotFoundException();
     return this.prisma.nota.delete({ where: { id } });
   }
 
-  proximosHitos(usuarioId: string) {
+  proximosHitos(despachoId: string) {
     const hoy = new Date();
     const en15dias = new Date();
     en15dias.setDate(hoy.getDate() + 15);
 
     return this.prisma.hito.findMany({
       where: {
-        expediente: { usuarioId },
+        expediente: { despachoId },
         fecha: { gte: hoy, lte: en15dias },
       },
       orderBy: { fecha: 'asc' },
@@ -111,6 +111,5 @@ export class ExpedientesService {
         expediente: { select: { id: true, titulo: true } },
       },
     });
-
   }
 }

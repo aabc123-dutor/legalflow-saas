@@ -19,25 +19,25 @@ export class AiController {
   constructor(private readonly service: AiService) {}
 
   @Post('navegacion')
-  navegacion(@Body() body: ChatDto, @CurrentUser() user: { sub: string }) {
-    return this.service.navegacionChat(user.sub, body.conversacionId ?? null, body.message);
+  navegacion(@Body() body: ChatDto, @CurrentUser() user: {despachoId:string , sub: string }) {
+    return this.service.navegacionChat( user.despachoId, user.sub, body.conversacionId ?? null, body.message);
   }
 
   @Post('jurisprudencia')
-  jurisprudencia(@Body() body: ChatDto, @CurrentUser() user: { sub: string }) {
-    return this.service.jurisprudenciaChat(user.sub, body.conversacionId ?? null, body.message);
+  jurisprudencia(@Body() body: ChatDto, @CurrentUser() user: { despachoId:string , sub: string }) {
+    return this.service.jurisprudenciaChat(user.despachoId, user.sub, body.conversacionId ?? null, body.message);
   }
 
   @Get('conversaciones')
   conversaciones(
-    @CurrentUser() user: { sub: string },
+    @CurrentUser() user: { despachoId:string , sub: string},
     @Query('tipo') tipo?: 'NAVEGACION' | 'JURISPRUDENCIA',
   ) {
-    return this.service.getConversaciones(user.sub, tipo);
+    return this.service.getConversaciones(user.despachoId, user.sub, tipo);
   }
 
   @Get('conversaciones/:id')
-  conversacion(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.getConversacion(id, user.sub);
+  conversacion(@Param('id') id: string, @CurrentUser() user: { despachoId:string , sub: string }) {
+    return this.service.getConversacion(id, user.despachoId, user.sub);
   }
 }

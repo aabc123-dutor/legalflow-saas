@@ -4,6 +4,8 @@ import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 
+type AuthUser = { sub: string; despachoId: string };
+
 @ApiTags('Documentos')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -12,27 +14,27 @@ export class DocumentosController {
   constructor(private readonly service: DocumentosService) {}
 
   @Get()
-  findAll(@CurrentUser() user: { sub: string }) {
-    return this.service.findAll(user.sub);
+  findAll(@CurrentUser() user: AuthUser) {
+    return this.service.findAll(user.despachoId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.findOne(id, user.sub);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.findOne(id, user.despachoId);
   }
 
   @Post()
-  create(@Body() body: any, @CurrentUser() user: { sub: string }) {
-    return this.service.create(user.sub, body);
+  create(@Body() body: any, @CurrentUser() user: AuthUser) {
+    return this.service.create(user.despachoId, user.sub, body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any, @CurrentUser() user: { sub: string }) {
-    return this.service.update(id, user.sub, body);
+  update(@Param('id') id: string, @Body() body: any, @CurrentUser() user: AuthUser) {
+    return this.service.update(id, user.despachoId, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.remove(id, user.sub);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.remove(id, user.despachoId);
   }
 }
