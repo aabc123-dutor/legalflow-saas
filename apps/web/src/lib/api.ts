@@ -81,6 +81,8 @@ export const facturasApi = {
   create: (data: any) => api.post('/facturas', data),
   update: (id: string, data: any) => api.patch(`/facturas/${id}`, data),
   delete: (id: string) => api.delete(`/facturas/${id}`),
+  createSuplido: (facturaId: string, data: any) => api.post(`/facturas/${facturaId}/suplidos`, data),
+  deleteSuplido: (suplidoId: string) => api.delete(`/facturas/suplidos/${suplidoId}`),
 };
 
 export const fiscalApi = {

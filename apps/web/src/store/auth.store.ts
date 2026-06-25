@@ -7,6 +7,7 @@ interface User {
   nombre: string;
   role: string;
   plan: string;
+  despachoId?: string | null;
 }
 
 interface AuthState {

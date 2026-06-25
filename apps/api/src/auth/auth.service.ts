@@ -53,7 +53,7 @@ export class AuthService {
     const valid = await bcrypt.compare(dto.password, user.passwordHash);
     if (!valid) throw new UnauthorizedException('Credenciales inválidas');
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.despachoId);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
     // Update last login
@@ -62,7 +62,8 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    return { user: { id: user.id, email: user.email, nombre: user.nombre, role: user.role, plan: user.plan }, ...tokens };
+    return { user: { id: user.id, email: user.email, nombre: user.nombre, role: user.role, plan: user.plan, despachoId: user.despachoId }, ...tokens };
+    
   }
 
   async refresh(userId: string, refreshToken: string) {
@@ -75,7 +76,7 @@ export class AuthService {
     const user = await this.prisma.usuario.findUnique({ where: { id: userId } });
     if (!user) throw new ForbiddenException('Acceso denegado');
 
-    const tokens = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role, user.despachoId);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
     return tokens;
   }
@@ -86,8 +87,8 @@ export class AuthService {
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
-  private async generateTokens(userId: string, email: string, role: string) {
-    const payload = { sub: userId, email, role };
+  private async generateTokens(userId: string, email: string, role: string, despachoId: string | null) {
+    const payload = { sub: userId, email, role, despachoId};
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {

@@ -3,36 +3,51 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { FacturasService } from './facturas.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { CreateFacturaDto, UpdateFacturaDto, CreateSuplidoDto } from './dto/facturas.dto';
+
+type AuthUser = { sub: string; despachoId: string };
 
 @ApiTags('Facturas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
+@Roles('ABOGADO')
 @Controller('facturas')
 export class FacturasController {
   constructor(private readonly service: FacturasService) {}
 
   @Get()
-  findAll(@CurrentUser() user: { sub: string }) {
-    return this.service.findAll(user.sub);
+  findAll(@CurrentUser() user: AuthUser) {
+    return this.service.findAll(user.despachoId);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.findOne(id, user.sub);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.findOne(id, user.despachoId);
   }
 
   @Post()
-  create(@Body() body: any, @CurrentUser() user: { sub: string }) {
-    return this.service.create(user.sub, body);
+  create(@Body() body: CreateFacturaDto, @CurrentUser() user: AuthUser) {
+    return this.service.create(user.despachoId, user.sub, body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any, @CurrentUser() user: { sub: string }) {
-    return this.service.update(id, user.sub, body);
+  update(@Param('id') id: string, @Body() body: UpdateFacturaDto, @CurrentUser() user: AuthUser) {
+    return this.service.update(id, user.despachoId, body);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string, @CurrentUser() user: { sub: string }) {
-    return this.service.remove(id, user.sub);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
+    return this.service.remove(id, user.despachoId);
+  }
+
+  @Post(':id/suplidos')
+  createSuplido(@Param('id') id: string, @Body() body: CreateSuplidoDto, @CurrentUser() user: AuthUser) {
+    return this.service.createSuplido(id, user.despachoId, body);
+  }
+
+  @Delete('suplidos/:suplidoId')
+  removeSuplido(@Param('suplidoId') suplidoId: string, @CurrentUser() user: AuthUser) {
+    return this.service.removeSuplido(suplidoId, user.despachoId);
   }
 }

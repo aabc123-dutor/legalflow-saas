@@ -13,37 +13,35 @@ export class ClientesService {
     private prisma: PrismaService,
     private email: EmailService,
     @Inject(REDIS_CLIENT) private redis: Redis,
-  ) {}
+  ) { }
 
-  findAll(usuarioId: string) {
+  findAll(despachoId: string) {
     return this.prisma.cliente.findMany({
-      where: { usuarioId },
+      where: { despachoId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async findOne(id: string, usuarioId: string) {
+  async findOne(id: string, despachoId: string) {
     const item = await this.prisma.cliente.findFirst({
-      where: { id, usuarioId },
+      where: { id, despachoId },
     });
     if (!item) throw new NotFoundException('Cliente no encontrado');
     return item;
   }
 
-  async create(usuarioId: string, data: CreateClienteDto) {
-    // Crear el registro de cliente
-    const cliente = await this.prisma.cliente.create({
-      data: { ...data, usuarioId },
-    });
+  async create(despachoId: string, creadoPorId: string, data: CreateClienteDto) {
+    let usuarioId: string | undefined;
 
-    // Si tiene email, crear usuario inactivo y enviar invitación
     if (data.email) {
       const existing = await this.prisma.usuario.findUnique({
         where: { email: data.email },
       });
 
-      if (!existing) {
-        await this.prisma.usuario.create({
+      if (existing) {
+        usuarioId = existing.id;
+      } else {
+        const nuevoUsuario = await this.prisma.usuario.create({
           data: {
             email: data.email,
             nombre: data.nombre,
@@ -53,16 +51,18 @@ export class ClientesService {
             active: false,
           },
         });
+        usuarioId = nuevoUsuario.id;
 
         const token = crypto.randomUUID();
-        const ttl = 60 * 60 * 48; // 48 horas
+        const ttl = 60 * 60 * 48;
         await this.redis.set(`invite:${token}`, data.email, 'EX', ttl);
-
         await this.email.sendInvitation(data.email, data.nombre, token);
       }
     }
 
-    return cliente;
+    return this.prisma.cliente.create({
+      data: { ...data, despachoId, creadoPorId, usuarioId },
+    });
   }
 
   async update(id: string, usuarioId: string, data: UpdateClienteDto) {
