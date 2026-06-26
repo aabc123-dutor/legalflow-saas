@@ -38,7 +38,7 @@ export class AiService {
     });
 
     // Build history for Claude
-    const history = conv.mensajes.map((m) => ({
+    const history = conv.mensajes.map((m: { role: string; content: string }) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));
@@ -79,7 +79,7 @@ Funcionalidades disponibles: Expedientes, Clientes, Documentos, Facturación, Da
     });
 
     const context = relevant
-      .map((j) => `## ${j.titulo}\nTribunal: ${j.tribunal ?? 'N/A'} | Fecha: ${j.fecha?.toISOString().slice(0, 10) ?? 'N/A'}\n${j.resumen}`)
+      .map((j: { titulo: string; tribunal: string | null; fecha: Date | null; resumen: string }) => `## ${j.titulo}\nTribunal: ${j.tribunal ?? 'N/A'} | Fecha: ${j.fecha?.toISOString().slice(0, 10) ?? 'N/A'}\n${j.resumen}`)
       .join('\n\n---\n\n');
 
     // Get or create conversation
@@ -101,7 +101,7 @@ Funcionalidades disponibles: Expedientes, Clientes, Documentos, Facturación, Da
       data: { conversacionId: conv.id, role: 'user', content: query },
     });
 
-    const history = conv.mensajes.map((m) => ({
+    const history = conv.mensajes.map((m: { role: string; content: string }) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }));

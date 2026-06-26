@@ -99,7 +99,7 @@ export class FacturasService {
 
     // Recalcular total sumando suplidos
     const suplidos = await this.prisma.suplido.findMany({ where: { facturaId } });
-    const totalSuplidos = suplidos.reduce((s, sup) => s + Number(sup.importe), 0);
+    const totalSuplidos = suplidos.reduce((s: number, sup: { importe: any }) => s + Number(sup.importe), 0);
     const base = Number(factura.baseImponible);
     const cuotaIva = Number(factura.cuotaIva);
     const cuotaIrpf = Number(factura.cuotaIrpf);
@@ -121,7 +121,7 @@ export class FacturasService {
 
     // Recalcular total sin este suplido
     const suplidos = await this.prisma.suplido.findMany({ where: { facturaId: suplido.facturaId! } });
-    const totalSuplidos = suplidos.reduce((s, sup) => s + Number(sup.importe), 0);
+    const totalSuplidos = suplidos.reduce((s: number, sup: { importe: any }) => s + Number(sup.importe), 0);
     const base = Number(suplido.factura!.baseImponible);
     const cuotaIva = Number(suplido.factura!.cuotaIva);
     const cuotaIrpf = Number(suplido.factura!.cuotaIrpf);
