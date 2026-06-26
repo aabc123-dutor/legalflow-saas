@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string;
   nombre: string;
+  apellidos: string;
   role: string;
   plan: string;
   despachoId?: string | null;
