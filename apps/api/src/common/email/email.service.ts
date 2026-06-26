@@ -3,24 +3,28 @@ import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
 import * as fs from 'fs';
 import * as path from 'path';
+import { Resend } from 'resend';
 
 @Injectable()
 export class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private resend: Resend | null = null;
   private logoBase64: string;
 
   constructor(private config: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.config.get('SMTP_HOST', 'localhost'),
-      port: this.config.get<number>('SMTP_PORT', 1025),
-      secure: false,
-      auth: this.config.get('SMTP_USER')
-        ? {
-          user: this.config.get('SMTP_USER'),
-          pass: this.config.get('SMTP_PASS'),
-        }
-        : undefined,
-    });
+    const resendApiKey = this.config.get<string>('RESEND_API_KEY');
+    if (resendApiKey) {
+      this.resend = new Resend(resendApiKey);
+    } else {
+      this.transporter = nodemailer.createTransport({
+        host: this.config.get('SMTP_HOST', 'localhost'),
+        port: this.config.get<number>('SMTP_PORT', 1025),
+        secure: false,
+        auth: this.config.get('SMTP_USER')
+          ? { user: this.config.get('SMTP_USER'), pass: this.config.get('SMTP_PASS') }
+          : undefined,
+      });
+    }
     const logoPath = path.join(process.cwd(), '..', 'web', 'public', 'icono.png');
     try {
       const logoBuffer = fs.readFileSync(logoPath);
@@ -30,15 +34,23 @@ export class EmailService {
     }
   }
 
+  private async send(to: string, subject: string, html: string) {
+    const from = this.config.get('SMTP_FROM', 'LegalFlow <noreply@legalflow.local>');
+    if (this.resend) {
+      await this.resend.emails.send({ from, to, subject, html });
+    } else {
+      await this.transporter!.sendMail({ from, to, subject, html });
+    }
+  }
+
   async sendPasswordReset(email: string, token: string) {
     const baseUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000');
     const url = `${baseUrl}/reset-password?token=${token}`;
 
-    await this.transporter.sendMail({
-      from: this.config.get('SMTP_FROM', 'LegalFlow <noreply@legalflow.local>'),
-      to: email,
-      subject: 'Restablecer contraseña — Merino & Vaskovska Abogados',
-      html: `
+    await this.send(
+      email,
+      'Restablecer contraseña — Merino & Vaskovska Abogados',
+      `
       <!DOCTYPE html>
       <html lang="es">
       <body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,sans-serif;">
@@ -98,19 +110,18 @@ export class EmailService {
         </table>
       </body>
       </html>
-    `,
-    });
+    `
+    );
   }
 
   async sendInvitation(email: string, nombre: string, token: string) {
     const baseUrl = this.config.get('FRONTEND_URL', 'http://localhost:3000');
     const url = `${baseUrl}/activar-cuenta?token=${token}`;
 
-    await this.transporter.sendMail({
-      from: this.config.get('SMTP_FROM', 'LegalFlow <noreply@legalflow.local>'),
-      to: email,
-      subject: 'Bienvenido a Merino & Vaskovska Abogados — Activa tu cuenta',
-      html: `
+    await this.send(
+      email,
+      'Bienvenido a Merino & Vaskovska Abogados — Activa tu cuenta',
+      `
       <!DOCTYPE html>
       <html lang="es">
       <body style="margin:0;padding:0;background-color:#f5f5f5;font-family:Arial,sans-serif;">
@@ -177,7 +188,7 @@ export class EmailService {
         </table>
       </body>
       </html>
-    `,
-    });
+    `);
   }
+
 }
