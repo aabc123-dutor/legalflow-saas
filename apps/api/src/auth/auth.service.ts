@@ -62,8 +62,7 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
-    return { user: { id: user.id, email: user.email, nombre: user.nombre, role: user.role, plan: user.plan, despachoId: user.despachoId }, ...tokens };
-    
+    return { user: { id: user.id, email: user.email, nombre: user.nombre, apellidos: user.apellidos, role: user.role, plan: user.plan, despachoId: user.despachoId }, ...tokens };
   }
 
   async refresh(userId: string, refreshToken: string) {
