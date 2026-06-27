@@ -3,6 +3,8 @@ import { PrismaService } from '../common/prisma/prisma.service';
 import { S3Service } from '../common/s3/s3.service';
 import { FacturasPdfService } from './factura-pdf.service';
 import { CreateFacturaDto, UpdateFacturaDto, CreateSuplidoDto, CreateConceptoDto } from './dto/facturas.dto';
+import { FiscalService } from '../fiscal/fiscal.service';
+
 
 @Injectable()
 export class FacturasService {
@@ -10,6 +12,7 @@ export class FacturasService {
     private prisma: PrismaService,
     private s3: S3Service,
     private pdfService: FacturasPdfService,
+    private fiscal: FiscalService,
   ) { }
 
   findAll(despachoId: string) {
@@ -26,7 +29,7 @@ export class FacturasService {
     const item = await this.prisma.factura.findFirst({
       where: { id, despachoId },
       include: {
-        expediente: { select: { titulo: true, cliente: { select: { nombre: true, apellidos: true, empresa: true, nif: true, direccion: true, telefono: true, email: true } } } },
+        expediente: { select: { titulo: true, cliente: { select: { nombre: true, apellidos: true, empresa: true, nif: true, direccion: true } } } },
         suplidos: { orderBy: { createdAt: 'asc' } },
         conceptos: { orderBy: { orden: 'asc' } },
       },
@@ -85,6 +88,8 @@ export class FacturasService {
         ...(data.fechaVencimiento && { fechaVencimiento: new Date(data.fechaVencimiento) }),
       },
     });
+    // Invalidar caché
+    await this.fiscal.invalidarCache(despachoId, factura.fechaEmision.getFullYear());
 
     // Generar PDF solo la primera vez que pasa a EMITIDA
     if (data.estado === 'EMITIDA' && factura.estado !== 'EMITIDA' && !factura.documentoId) {
@@ -97,7 +102,12 @@ export class FacturasService {
   private async generarYVincularPdf(facturaId: string, despachoId: string, creadoPorId: string) {
     const factura = await this.findOne(facturaId, despachoId);
 
-    const pdfBuffer = await this.pdfService.generar(factura);
+    const despacho = await this.prisma.despacho.findUnique({
+      where: { id: despachoId },
+      include: { configuracionFiscal: true },
+    });
+
+    const pdfBuffer = await this.pdfService.generar(factura, despacho);
     const s3Key = `${despachoId}/facturas/${facturaId}.pdf`;
 
     await this.s3.upload(s3Key, pdfBuffer, 'application/pdf');
@@ -211,10 +221,14 @@ export class FacturasService {
     const totalSuplidos = suplidos.reduce((s, sup) => s + Number(sup.importe), 0);
     const total = +(base + cuotaIva - cuotaIrpf + totalSuplidos).toFixed(2);
 
-    return this.prisma.factura.update({
+    const actualizada = await this.prisma.factura.update({
       where: { id: facturaId },
       data: { baseImponible: base, cuotaIva, cuotaIrpf, tipoIrpf, total },
     });
+
+    await this.fiscal.invalidarCache(factura.despachoId, factura.fechaEmision.getFullYear());
+
+    return actualizada;
   }
 
   async createConcepto(facturaId: string, despachoId: string, data: CreateConceptoDto) {

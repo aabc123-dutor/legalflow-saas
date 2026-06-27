@@ -3,16 +3,6 @@ import * as PDFDocument from 'pdfkit';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const DESPACHO = {
-    nombre: 'MERINO & VASKOVSKA ABOGADOS',
-    titulares: 'MERINO VICENTE IÑIGO Y VASKOVSKA SAVCHENKOVA ROSITSA',
-    cif: 'E71549497',
-    direccion: 'C/Arrabal 14, 31440, Lumbier (Navarra)',
-    iban: 'ES16 2100 5061 3702 0009 3882',
-    banco: 'LA CAIXA',
-    diasPago: 7,
-};
-
 @Injectable()
 export class FacturasPdfService {
     private logoPath: string;
@@ -21,7 +11,7 @@ export class FacturasPdfService {
         this.logoPath = path.join(process.cwd(), '..', 'web', 'public', 'icono-negro.png');
     }
 
-    generar(factura: any): Promise<Buffer> {
+    generar(factura: any, despacho: any): Promise<Buffer> {
         return new Promise((resolve, reject) => {
             const doc = new PDFDocument({ size: 'A4', margin: 50 });
             const chunks: Buffer[] = [];
@@ -30,6 +20,14 @@ export class FacturasPdfService {
             doc.on('end', () => resolve(Buffer.concat(chunks)));
             doc.on('error', reject);
 
+            const cfg = despacho.configuracionFiscal ?? {};
+            const nombreDespacho = despacho.nombre;
+            const titulares = cfg.titulares ?? despacho.nombre;
+            const cif = cfg.nif ?? '';
+            const direccionDespacho = cfg.direccion ?? '';
+            const iban = cfg.iban ?? '';
+            const banco = cfg.banco ?? '';
+            const diasPago = cfg.diasPago ?? 7;
             const cliente = factura.expediente.cliente;
             const nombreCliente = `${cliente.nombre} ${cliente.apellidos ?? ''}`.trim();
 
@@ -56,10 +54,10 @@ export class FacturasPdfService {
 
             // Datos del despacho
             doc.fontSize(11).fillColor('#374151').font('Helvetica-Bold')
-                .text(DESPACHO.titulares, { align: 'center' });
+                .text(titulares, { align: 'center' });
             doc.font('Helvetica')
-                .text(`CIF nº ${DESPACHO.cif}`, { align: 'center' })
-                .text(DESPACHO.direccion, { align: 'center' });
+                .text(`CIF nº ${cif}`, { align: 'center' })
+                .text(direccionDespacho, { align: 'center' });
 
             doc.moveDown(1.5);
             doc.fontSize(18).fillColor('#1e3a5f').font('Helvetica-Bold').text('FACTURA', { align: 'center', underline: true });
@@ -83,14 +81,6 @@ export class FacturasPdfService {
             }
             if (cliente.direccion) {
                 doc.text(cliente.direccion, 300, yCliente, { width: 245, align: 'right' });
-                yCliente += 14;
-            }
-            if (cliente.telefono) {
-                doc.text(`Tel: ${cliente.telefono}`, 300, yCliente, { width: 245, align: 'right' });
-                yCliente += 14;
-            }
-            if (cliente.email) {
-                doc.text(cliente.email, 300, yCliente, { width: 245, align: 'right' });
                 yCliente += 14;
             }
 
@@ -158,7 +148,7 @@ export class FacturasPdfService {
             // Firma
             doc.rect(380, y, 165, 50).strokeColor('#000').stroke();
             doc.font('Helvetica').fontSize(11).text('Fdo.', 380, y + 10, { width: 165, align: 'center' });
-            doc.font('Helvetica-Bold').text(DESPACHO.nombre, 380, y + 24, { width: 165, align: 'center' });
+            doc.font('Helvetica-Bold').text(nombreDespacho, 380, y + 24, { width: 165, align: 'center' });
 
             if (factura.notas) {
                 doc.font('Helvetica').fontSize(11).fillColor('#666')
@@ -171,7 +161,7 @@ export class FacturasPdfService {
             doc.fontSize(11).fillColor('#000');
             doc.font('Helvetica-Bold').text('CONDICIONES Y FORMAS DE PAGO:', 50, 700, { width: 495 });
             doc.font('Helvetica').text(
-                `El pago se hará efectivo en un plazo no superior a ${DESPACHO.diasPago} días, en la Cuenta Corriente del Banco ${DESPACHO.banco} nº ${DESPACHO.iban}.`,
+                `El pago se hará efectivo en un plazo no superior a ${diasPago} días, en la Cuenta Corriente del Banco ${banco} nº ${iban}.`,
                 50, 714, { width: 495 },
             );
             doc.text(`Concepto: ${nombreCliente} — Factura ${factura.numero}.`, 50, 742, { width: 495 });

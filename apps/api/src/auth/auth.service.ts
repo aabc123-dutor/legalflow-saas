@@ -37,8 +37,6 @@ export class AuthService {
         passwordHash,
         nombre: dto.nombre,
         apellidos: dto.apellidos,
-        // Create default fiscal config
-        configuracionFiscal: { create: {} },
       },
       select: { id: true, email: true, nombre: true, apellidos: true, role: true, plan: true },
     });
