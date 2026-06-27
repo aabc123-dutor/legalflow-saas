@@ -86,6 +86,9 @@ model Despacho {
   conversaciones Conversacion[]
   usageEvents    UsageEvent[]
 
+    // Fiscal config
+  configuracionFiscal ConfiguracionFiscal?
+
   @@map("despachos")
 }
 
@@ -104,9 +107,6 @@ model Usuario {
   rolDespacho   RolDespacho? @default(OWNER) @map("rol_despacho")
   createdAt     DateTime     @default(now()) @map("created_at")
   updatedAt     DateTime     @updatedAt @map("updated_at")
-
-  // Fiscal config
-  configuracionFiscal ConfiguracionFiscal?
 
   // Relations
   despacho        Despacho?      @relation(fields: [despachoId], references: [id])
@@ -311,16 +311,24 @@ model Suplido {
 
 model ConfiguracionFiscal {
   id               String   @id @default(uuid())
-  usuarioId        String   @unique @map("usuario_id")
+  despachoId       String   @unique @map("despacho_id")
   tipoIva          Decimal  @default(21) @map("tipo_iva") @db.Decimal(5, 2)
   tipoIrpf         Decimal  @default(15) @map("tipo_irpf") @db.Decimal(5, 2)
   nuevoProfesional Boolean  @default(false) @map("nuevo_profesional")
   nif              String?
   epigrafeCnae     String?  @map("epigrafe_cnae")
+
+  // Datos del despacho para la factura
+  titulares        String?
+  direccion        String?
+  iban             String?
+  banco            String?
+  diasPago         Int?     @default(7) @map("dias_pago")
+
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  despacho Despacho @relation(fields: [despachoId], references: [id], onDelete: Cascade)
 
   @@map("configuracion_fiscal")
 }
