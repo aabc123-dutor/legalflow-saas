@@ -24,8 +24,8 @@ export class FiscalController {
   }
 
   @Get('resumen/:anio')
-  getResumen(@Param('anio', ParseIntPipe) anio: number, @CurrentUser() user: { sub: string }) {
-    return this.service.getResumenTrimestral(user.sub, anio);
+  getResumen(@Param('anio', ParseIntPipe) anio: number, @CurrentUser() user: { despachoId: string }) {
+    return this.service.getResumenTrimestral(user.despachoId, anio);
   }
 
   @Get('calcular/:base')

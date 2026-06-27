@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsDateString, IsUUID, IsNumber, Min } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsDateString, IsUUID, IsNumber, Min, ValidateNested, IsArray, ArrayMinSize } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum EstadoFactura {
   BORRADOR = 'BORRADOR',
@@ -6,6 +7,15 @@ export enum EstadoFactura {
   PAGADA = 'PAGADA',
   VENCIDA = 'VENCIDA',
   ANULADA = 'ANULADA',
+}
+
+export class ConceptoDto {
+  @IsString()
+  descripcion: string;
+
+  @IsNumber()
+  @Min(0)
+  importe: number;
 }
 
 export class CreateFacturaDto {
@@ -16,9 +26,11 @@ export class CreateFacturaDto {
   @IsString()
   numero?: string;
 
-  @IsNumber()
-  @Min(0)
-  baseImponible: number;
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ConceptoDto)
+  conceptos: ConceptoDto[];
 
   @IsDateString()
   fechaEmision: string;
@@ -38,6 +50,10 @@ export class CreateFacturaDto {
 
 export class UpdateFacturaDto {
   @IsOptional()
+  @IsString()
+  numero?: string;
+
+  @IsOptional()
   @IsEnum(EstadoFactura)
   estado?: EstadoFactura;
 
@@ -53,6 +69,15 @@ export class UpdateFacturaDto {
 export class CreateSuplidoDto {
   @IsString()
   concepto: string;
+
+  @IsNumber()
+  @Min(0)
+  importe: number;
+}
+
+export class CreateConceptoDto {
+  @IsString()
+  descripcion: string;
 
   @IsNumber()
   @Min(0)

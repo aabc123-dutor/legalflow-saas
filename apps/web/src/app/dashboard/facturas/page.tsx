@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { facturasApi, expedientesApi } from '@/lib/api';
 import { Plus, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useForm, useFieldArray } from 'react-hook-form';
 
 const ESTADO_COLOR: Record<string, string> = {
   BORRADOR: 'bg-gray-100 text-gray-500',
@@ -20,10 +20,13 @@ const ESTADO_COLOR: Record<string, string> = {
 
 const schema = z.object({
   expedienteId: z.string().uuid('Selecciona un expediente'),
-  baseImponible: z.coerce.number().min(0, 'Importe inválido'),
   fechaEmision: z.string().min(1, 'Introduce la fecha de emisión'),
   fechaVencimiento: z.string().optional(),
   notas: z.string().optional(),
+  conceptos: z.array(z.object({
+    descripcion: z.string().min(1, 'Introduce una descripción'),
+    importe: z.coerce.number().min(0, 'Importe inválido'),
+  })).min(1, 'Añade al menos un concepto'),
 });
 
 type Form = z.infer<typeof schema>;
@@ -42,10 +45,14 @@ export default function FacturasPage() {
     queryFn: () => expedientesApi.list().then((r) => r.data),
   });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<Form>({
+  const { register, handleSubmit, reset, control, watch, formState: { errors } } = useForm<Form>({
     resolver: zodResolver(schema),
-    defaultValues: { fechaEmision: new Date().toISOString().split('T')[0] },
+    defaultValues: { fechaEmision: new Date().toISOString().split('T')[0], conceptos: [{ descripcion: '', importe: 0 }] },
   });
+
+  const { fields, append, remove } = useFieldArray({ control, name: 'conceptos' });
+  const conceptosValues = watch('conceptos');
+  const totalConceptos = conceptosValues?.reduce((s, c) => s + (Number(c.importe) || 0), 0) ?? 0;
 
   const router = useRouter();
 
@@ -158,20 +165,45 @@ export default function FacturasPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Base imponible (honorarios) *</label>
-                <div className="relative">
-                  <input
-                    {...register('baseImponible')}
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    placeholder="0.00"
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 pr-8"
-                  />
-                  <span className="absolute right-3 top-2.5 text-sm text-gray-400">€</span>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Conceptos *</label>
+                <div className="space-y-2">
+                  {fields.map((field, index) => (
+                    <div key={field.id} className="flex gap-2">
+                      <input
+                        {...register(`conceptos.${index}.descripcion`)}
+                        placeholder="Descripción del concepto"
+                        className="flex-1 px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                      <div className="relative w-32">
+                        <input
+                          {...register(`conceptos.${index}.importe`)}
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 pr-7"
+                        />
+                        <span className="absolute right-2 top-2.5 text-xs text-gray-400">€</span>
+                      </div>
+                      {fields.length > 1 && (
+                        <button type="button" onClick={() => remove(index)} className="px-2 text-gray-400 hover:text-red-500">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">IVA (21%) e IRPF se calculan automáticamente según el tipo de cliente.</p>
-                {errors.baseImponible && <p className="text-xs text-red-500 mt-1">{errors.baseImponible.message}</p>}
+                <button
+                  type="button"
+                  onClick={() => append({ descripcion: '', importe: 0 })}
+                  className="mt-2 text-xs text-brand-600 hover:text-brand-700 flex items-center gap-1"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Añadir concepto
+                </button>
+                {errors.conceptos && <p className="text-xs text-red-500 mt-1">{errors.conceptos.message}</p>}
+                <p className="text-sm text-gray-600 mt-2 text-right font-medium">
+                  Total honorarios: {totalConceptos.toLocaleString('es-ES', { minimumFractionDigits: 2 })} €
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

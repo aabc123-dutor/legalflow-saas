@@ -14,28 +14,25 @@ export interface TrimestralAggregate {
 
 @Injectable()
 export class FiscalService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService) { }
 
   /** Resumen fiscal por trimestre para Modelo 303 y 130 */
-  async getResumenTrimestral(usuarioId: string, anio: number): Promise<TrimestralAggregate[]> {
-    // Raw query to group by quarter
+  async getResumenTrimestral(despachoId: string, anio: number): Promise<TrimestralAggregate[]> {
     const rows = await this.prisma.$queryRaw<any[]>`
-      SELECT
-        EXTRACT(QUARTER FROM fecha_emision)::int AS trimestre,
-        EXTRACT(YEAR   FROM fecha_emision)::int AS anio,
-        SUM(base_imponible)::float AS "baseImponible",
-        SUM(cuota_iva)::float      AS "cuotaIva",
-        SUM(cuota_irpf)::float     AS "cuotaIrpf",
-        SUM(total)::float          AS "totalFacturado",
-        COUNT(*)::int              AS "numFacturas"
-      FROM facturas
-      WHERE usuario_id = ${usuarioId}
-        AND estado NOT IN ('BORRADOR', 'ANULADA')
-        AND EXTRACT(YEAR FROM fecha_emision) = ${anio}
-      GROUP BY trimestre, anio
-      ORDER BY trimestre
-    `;
-
+    SELECT
+      EXTRACT(QUARTER FROM fecha_emision)::int AS trimestre,
+      EXTRACT(YEAR   FROM fecha_emision)::int AS anio,
+      SUM(base_imponible)::float AS "baseImponible",
+      SUM(cuota_iva)::float      AS "cuotaIva",
+      SUM(cuota_irpf)::float     AS "cuotaIrpf",
+      SUM(total)::float          AS "totalFacturado",
+      COUNT(*)::int              AS "numFacturas"
+    FROM facturas
+    WHERE despacho_id = ${despachoId}
+      AND estado NOT IN ('BORRADOR', 'ANULADA')
+      AND EXTRACT(YEAR FROM fecha_emision) = ${anio}
+    GROUP BY trimestre, anio
+  `;
     return rows;
   }
 
