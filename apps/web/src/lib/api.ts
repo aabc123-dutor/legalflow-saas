@@ -10,7 +10,7 @@ export const api = axios.create({
 
 // Lee el accessToken del store de Zustand (memoria), no de localStorage
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken 
+  const token = useAuthStore.getState().accessToken
     ?? (typeof window !== 'undefined' ? sessionStorage.getItem('accessToken') : null);
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
@@ -23,7 +23,7 @@ api.interceptors.response.use(
   async (error) => {
     console.log('interceptor error:', error.response?.status, error.config?.url);
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry && !original.url.includes('/auth/login'))  {
+    if (error.response?.status === 401 && !original._retry && !original.url.includes('/auth/login')) {
       original._retry = true;
       try {
         const { data } = await axios.post(`${API_URL}/auth/refresh`, {}, { withCredentials: true });
@@ -83,6 +83,9 @@ export const facturasApi = {
   delete: (id: string) => api.delete(`/facturas/${id}`),
   createSuplido: (facturaId: string, data: any) => api.post(`/facturas/${facturaId}/suplidos`, data),
   deleteSuplido: (suplidoId: string) => api.delete(`/facturas/suplidos/${suplidoId}`),
+  getPdfUrl: (id: string) => api.get(`/facturas/${id}/pdf`),
+  createConcepto: (facturaId: string, data: any) => api.post(`/facturas/${facturaId}/conceptos`, data),
+  deleteConcepto: (conceptoId: string) => api.delete(`/facturas/conceptos/${conceptoId}`),
 };
 
 export const fiscalApi = {

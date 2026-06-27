@@ -16,6 +16,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { EmailModule } from './common/email/email.module';
+import { S3Module } from './common/s3/s3.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { EmailModule } from './common/email/email.module';
     FiscalModule,
     AiModule,
     EmailModule,
+    S3Module,
   ],
 
   providers: [

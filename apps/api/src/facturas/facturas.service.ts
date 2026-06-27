@@ -1,21 +1,22 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
-import { CreateFacturaDto, UpdateFacturaDto, CreateSuplidoDto } from './dto/facturas.dto';
+import { S3Service } from '../common/s3/s3.service';
+import { FacturasPdfService } from './factura-pdf.service';
+import { CreateFacturaDto, UpdateFacturaDto, CreateSuplidoDto, CreateConceptoDto } from './dto/facturas.dto';
 
 @Injectable()
 export class FacturasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private s3: S3Service,
+    private pdfService: FacturasPdfService,
+  ) { }
 
   findAll(despachoId: string) {
     return this.prisma.factura.findMany({
       where: { despachoId },
       include: {
-        expediente: {
-          select: {
-            titulo: true,
-            cliente: { select: { nombre: true, apellidos: true, empresa: true } },
-          },
-        },
+        expediente: { select: { titulo: true, cliente: { select: { nombre: true, apellidos: true, empresa: true } } } },
       },
       orderBy: { fechaEmision: 'desc' },
     });
@@ -25,18 +26,15 @@ export class FacturasService {
     const item = await this.prisma.factura.findFirst({
       where: { id, despachoId },
       include: {
-        expediente: {
-          select: {
-            titulo: true,
-            cliente: { select: { nombre: true, apellidos: true, empresa: true } },
-          },
-        },
+        expediente: { select: { titulo: true, cliente: { select: { nombre: true, apellidos: true, empresa: true, nif: true, direccion: true, telefono: true, email: true } } } },
         suplidos: { orderBy: { createdAt: 'asc' } },
+        conceptos: { orderBy: { orden: 'asc' } },
       },
     });
     if (!item) throw new NotFoundException('Factura no encontrada');
     return item;
   }
+
 
   async create(despachoId: string, creadoPorId: string, data: CreateFacturaDto) {
     const expediente = await this.prisma.expediente.findFirst({
@@ -45,7 +43,7 @@ export class FacturasService {
     });
     if (!expediente) throw new NotFoundException('Expediente no encontrado');
 
-    const base = Number(data.baseImponible);
+    const base = data.conceptos.reduce((s, c) => s + Number(c.importe), 0);
     const tipoIva = 21;
     const tipoIrpf = expediente.cliente.empresa ? 15 : 0;
     const cuotaIva = +(base * tipoIva / 100).toFixed(2);
@@ -58,7 +56,7 @@ export class FacturasService {
         despachoId,
         creadoPorId,
         expedienteId: data.expedienteId,
-        numero: numero,
+        numero,
         baseImponible: base,
         tipoIva,
         cuotaIva,
@@ -69,19 +67,73 @@ export class FacturasService {
         fechaVencimiento: data.fechaVencimiento ? new Date(data.fechaVencimiento) : null,
         estado: data.estado ?? 'BORRADOR',
         notas: data.notas,
+        conceptos: {
+          create: data.conceptos.map((c, i) => ({ descripcion: c.descripcion, importe: c.importe, orden: i })),
+        },
       },
+      include: { conceptos: true },
     });
   }
 
-  async update(id: string, despachoId: string, data: UpdateFacturaDto) {
-    await this.findOne(id, despachoId);
-    return this.prisma.factura.update({
+  async update(id: string, despachoId: string, creadoPorId: string, data: UpdateFacturaDto) {
+    const factura = await this.findOne(id, despachoId);
+
+    const actualizada = await this.prisma.factura.update({
       where: { id },
       data: {
         ...data,
         ...(data.fechaVencimiento && { fechaVencimiento: new Date(data.fechaVencimiento) }),
       },
     });
+
+    // Generar PDF solo la primera vez que pasa a EMITIDA
+    if (data.estado === 'EMITIDA' && factura.estado !== 'EMITIDA' && !factura.documentoId) {
+      await this.generarYVincularPdf(id, despachoId, creadoPorId);
+    }
+
+    return actualizada;
+  }
+
+  private async generarYVincularPdf(facturaId: string, despachoId: string, creadoPorId: string) {
+    const factura = await this.findOne(facturaId, despachoId);
+
+    const pdfBuffer = await this.pdfService.generar(factura);
+    const s3Key = `${despachoId}/facturas/${facturaId}.pdf`;
+
+    await this.s3.upload(s3Key, pdfBuffer, 'application/pdf');
+
+    const documento = await this.prisma.documento.create({
+      data: {
+        despachoId,
+        creadoPorId,
+        expedienteId: factura.expedienteId,
+        titulo: `Factura ${factura.numero}`,
+        descripcion: `PDF generado automáticamente para la factura ${factura.numero}`,
+        tipo: 'FACTURA_PDF',
+        s3Key,
+        sizeBytes: pdfBuffer.length,
+      },
+    });
+
+    await this.prisma.factura.update({
+      where: { id: facturaId },
+      data: { documentoId: documento.id },
+    });
+  }
+
+  async getUrlDescarga(id: string, despachoId: string): Promise<string> {
+    const factura = await this.prisma.factura.findFirst({
+      where: { id, despachoId },
+      include: { documento: true, expediente: { include: { cliente: true } } },
+    });
+    if (!factura) throw new NotFoundException('Factura no encontrada');
+    if (!factura.documento) throw new BadRequestException('La factura aún no tiene PDF generado');
+
+    const cliente = factura.expediente.cliente;
+    const nombreCliente = `${cliente.nombre} ${cliente.apellidos ?? ''}`.trim();
+    const filename = `${factura.numero} - ${nombreCliente}.pdf`.replace(/[\/\\]/g, '-');
+
+    return this.s3.getSignedDownloadUrl(factura.documento.s3Key, 300, filename);
   }
 
   async remove(id: string, despachoId: string) {
@@ -131,19 +183,63 @@ export class FacturasService {
   }
 
   private async generarNumero(despachoId: string): Promise<string> {
-    const año = new Date().getFullYear();
-    const ultima = await this.prisma.factura.findFirst({
-      where: { despachoId, numero: { startsWith: `${año}-` } },
-      orderBy: { numero: 'desc' },
+    const anio = new Date().getFullYear();
+
+    const counter = await this.prisma.facturaCounter.upsert({
+      where: { despachoId_anio: { despachoId, anio } },
+      create: { despachoId, anio, ultimo: 1 },
+      update: { ultimo: { increment: 1 } },
     });
 
-    let siguiente = 1;
-    if (ultima) {
-      const partes = ultima.numero.split('-');
-      const num = parseInt(partes[partes.length - 1], 10);
-      if (!isNaN(num)) siguiente = num + 1;
-    }
-
-    return `${año}-${String(siguiente).padStart(3, '0')}`;
+    return `FAC-${anio}-${String(counter.ultimo).padStart(3, '0')}`;
   }
+
+  private async recalcularDesdeConceptos(facturaId: string) {
+    const factura = await this.prisma.factura.findUnique({
+      where: { id: facturaId },
+      include: { conceptos: true, expediente: { include: { cliente: { select: { empresa: true } } } } },
+    });
+    if (!factura) throw new NotFoundException();
+
+    const base = factura.conceptos.reduce((s, c) => s + Number(c.importe), 0);
+    const tipoIva = Number(factura.tipoIva);
+    const tipoIrpf = factura.expediente.cliente.empresa ? 15 : 0;
+    const cuotaIva = +(base * tipoIva / 100).toFixed(2);
+    const cuotaIrpf = +(base * tipoIrpf / 100).toFixed(2);
+
+    const suplidos = await this.prisma.suplido.findMany({ where: { facturaId } });
+    const totalSuplidos = suplidos.reduce((s, sup) => s + Number(sup.importe), 0);
+    const total = +(base + cuotaIva - cuotaIrpf + totalSuplidos).toFixed(2);
+
+    return this.prisma.factura.update({
+      where: { id: facturaId },
+      data: { baseImponible: base, cuotaIva, cuotaIrpf, tipoIrpf, total },
+    });
+  }
+
+  async createConcepto(facturaId: string, despachoId: string, data: CreateConceptoDto) {
+    const factura = await this.findOne(facturaId, despachoId);
+    if (factura.estado !== 'BORRADOR') throw new BadRequestException('Solo se pueden editar conceptos en facturas en borrador');
+
+    const ultimoOrden = factura.conceptos?.length ?? 0;
+    const concepto = await this.prisma.conceptoFactura.create({
+      data: { facturaId, descripcion: data.descripcion, importe: data.importe, orden: ultimoOrden },
+    });
+
+    await this.recalcularDesdeConceptos(facturaId);
+    return concepto;
+  }
+
+  async removeConcepto(conceptoId: string, despachoId: string) {
+    const concepto = await this.prisma.conceptoFactura.findFirst({
+      where: { id: conceptoId },
+      include: { factura: { select: { despachoId: true, id: true, estado: true } } },
+    });
+    if (!concepto || concepto.factura.despachoId !== despachoId) throw new NotFoundException();
+    if (concepto.factura.estado !== 'BORRADOR') throw new BadRequestException('Solo se pueden editar conceptos en facturas en borrador');
+
+    await this.prisma.conceptoFactura.delete({ where: { id: conceptoId } });
+    await this.recalcularDesdeConceptos(concepto.factura.id);
+  }
+
 }
