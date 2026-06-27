@@ -92,6 +92,8 @@ export default function FiscalPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard Fiscal</h1>
           <p className="text-sm text-gray-500 mt-0.5">Modelos 303 y 130 · IVA · IRPF</p>
+          <p className="text-sm text-gray-500 mt-0.5">Método de cálculo: Se tiene encuenta tanto facturas emitidas como pagadas, borradores o anuladas no se tendrán en cuenta.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Se calcula respecto al año de emisión de la factura</p>
         </div>
         <select value={anio} onChange={(e) => setAnio(+e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
           {[currentYear, currentYear - 1, currentYear - 2].map((y) => (
