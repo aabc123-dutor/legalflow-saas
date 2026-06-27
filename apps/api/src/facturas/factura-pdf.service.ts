@@ -72,16 +72,17 @@ export class FacturasPdfService {
 
             let yCliente = yDatos;
             doc.font('Helvetica-Bold').text(nombreCliente.toUpperCase(), 300, yCliente, { width: 245, align: 'right' });
-            yCliente += 14;
+            yCliente += doc.heightOfString(nombreCliente.toUpperCase(), { width: 245 }) + 2;
             doc.font('Helvetica');
 
             if (cliente.nif) {
-                doc.text(`${cliente.empresa ? 'CIF' : 'NIF'} nº: ${cliente.nif}`, 300, yCliente, { width: 245, align: 'right' });
-                yCliente += 14;
+                const texto = `${cliente.empresa ? 'CIF' : 'NIF'} nº: ${cliente.nif}`;
+                doc.text(texto, 300, yCliente, { width: 245, align: 'right' });
+                yCliente += doc.heightOfString(texto, { width: 245 }) + 2;
             }
             if (cliente.direccion) {
                 doc.text(cliente.direccion, 300, yCliente, { width: 245, align: 'right' });
-                yCliente += 14;
+                yCliente += doc.heightOfString(cliente.direccion, { width: 245 }) + 2;
             }
 
             doc.y = Math.max(yDatos + 56, yCliente) + 20;
