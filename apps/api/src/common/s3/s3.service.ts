@@ -26,6 +26,7 @@ export class S3Service {
         Key: key,
         Body: body,
         ContentType: contentType,
+        ServerSideEncryption: 'AES256',
       }),
     );
   }

@@ -104,4 +104,14 @@ export const aiApi = {
   conversacion: (id: string) => api.get(`/ai/conversaciones/${id}`),
 };
 
+export const documentosApi = {
+  list: () => api.get('/documentos'),
+  listByExpediente: (expedienteId: string) => api.get(`/documentos/expediente/${expedienteId}`),
+  get: (id: string) => api.get(`/documentos/${id}`),
+  getDownloadUrl: (id: string) => api.get(`/documentos/${id}/descargar`),
+  upload: (formData: FormData) =>
+    api.post('/documentos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  delete: (id: string) => api.delete(`/documentos/${id}`),
+};
+
 
