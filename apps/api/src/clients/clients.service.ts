@@ -49,6 +49,7 @@ export class ClientesService {
             passwordHash: '',
             role: 'CLIENTE',
             active: false,
+            rolDespacho: null,
           },
         });
         usuarioId = nuevoUsuario.id;
