@@ -428,7 +428,11 @@ export default function ExpedienteDetallePage() {
                                             {f.fechaVencimiento ? new Date(f.fechaVencimiento).toLocaleDateString('es-ES') : '—'}
                                         </td>
                                         <td className="py-2 px-2">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cercaDeVencer ? 'bg-red-200 text-red-900' : f.estado === 'PAGADA' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${cercaDeVencer ? 'bg-red-200 text-red-900'
+                                                : f.estado === 'PAGADA' ? 'bg-green-50 text-green-700' :
+                                                    f.estado === 'EMITIDA' ? 'bg-blue-50 text-blue-700' :
+                                                        f.estado === 'ANULADA' ? 'bg-gray-100 text-gray-400' :
+                                                            'bg-gray-100 text-gray-500'
                                                 }`}>
                                                 {f.estado}
                                             </span>

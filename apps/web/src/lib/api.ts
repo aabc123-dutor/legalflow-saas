@@ -67,6 +67,9 @@ export const expedientesApi = {
   proximosHitos: () => api.get('/expedientes/hitos/proximos'),
 
   getMios: () => api.get('/portal/mis-expedientes'),
+  getMioById: (id: string) => api.get(`/portal/mis-expedientes/${id}`),
+
+  getResumenPortal: () => api.get('/portal/resumen'),
 };
 
 export const clientesApi = {
