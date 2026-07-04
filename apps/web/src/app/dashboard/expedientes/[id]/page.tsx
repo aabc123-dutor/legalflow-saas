@@ -233,7 +233,12 @@ export default function ExpedienteDetallePage() {
                                 Cancelar
                             </button>
                             <button
-                                onClick={editForm.handleSubmit((d) => updateMutation.mutate(d))}
+                                onClick={editForm.handleSubmit((d) => updateMutation.mutate({
+                                    titulo: d.titulo,
+                                    descripcion: d.descripcion,
+                                    estado: d.estado,
+                                    ...(d.fechaCierre ? { fechaCierre: d.fechaCierre } : {}),
+                                }))}
                                 disabled={updateMutation.isPending}
                                 className="px-4 py-2 bg-brand-600 text-white text-sm font-medium rounded-lg hover:bg-brand-700 disabled:opacity-60"
                             >
