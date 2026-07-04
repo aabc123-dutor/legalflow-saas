@@ -1,12 +1,8 @@
-export default function PortalPage() {
+export default function PortalInicioPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-1">Mi portal</h1>
-      <p className="text-gray-500 text-sm mb-8">Bienvenido a tu área personal</p>
-
-      <div className="bg-white rounded-xl border px-6 py-8 text-center text-gray-400 text-sm">
-        Próximamente podrás consultar tus expedientes y documentos aquí.
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Bienvenido a tu portal</h1>
+      <p className="text-sm text-gray-500 mb-8">Aquí puedes consultar tus expedientes, documentos y facturas.</p>
     </div>
   );
 }

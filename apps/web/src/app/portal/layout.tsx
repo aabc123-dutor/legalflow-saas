@@ -1,4 +1,14 @@
+import Link from 'next/link';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import { FileText, FolderOpen, Receipt, Home } from 'lucide-react';
+import { PortalNav } from '@/components/portal/PortalNav';
+
+const NAV = [
+  { href: '/portal', label: 'Inicio', icon: Home },
+  { href: '/portal/expedientes', label: 'Mis expedientes', icon: FolderOpen },
+  { href: '/portal/documentos', label: 'Mis documentos', icon: FileText },
+  { href: '/portal/facturas', label: 'Mis facturas', icon: Receipt },
+];
 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +22,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               <p className="text-white/50 text-[10px] tracking-[3px] mt-1">PORTAL DEL CLIENTE</p>
             </div>
           </div>
+          <PortalNav />
         </aside>
         <main className="ml-64 flex-1 min-h-screen bg-gray-50">
           <div className="p-8">{children}</div>

@@ -223,6 +223,7 @@ model Documento {
   version      Int           @default(1)
   createdAt    DateTime      @default(now()) @map("created_at")
   updatedAt    DateTime      @updatedAt @map("updated_at")
+  visibleParaCliente Boolean @default(true) @map("visible_para_cliente")
 
   despacho   Despacho   @relation(fields: [despachoId], references: [id], onDelete: Cascade)
   creadoPor  Usuario    @relation(fields: [creadoPorId], references: [id])

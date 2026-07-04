@@ -112,4 +112,16 @@ export class ExpedientesService {
       },
     });
   }
+
+  async findByClienteUsuario(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return [];
+
+    return this.prisma.expediente.findMany({
+      where: { despachoId, clienteId: cliente.id },
+      orderBy: { fechaApertura: 'desc' },
+    });
+  }
 }

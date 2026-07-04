@@ -65,6 +65,8 @@ export const expedientesApi = {
   deleteNota: (notaId: string) => api.delete(`/expedientes/notas/${notaId}`),
 
   proximosHitos: () => api.get('/expedientes/hitos/proximos'),
+
+  getMios: () => api.get('/portal/mis-expedientes'),
 };
 
 export const clientesApi = {
@@ -112,6 +114,10 @@ export const documentosApi = {
   upload: (formData: FormData) =>
     api.post('/documentos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete: (id: string) => api.delete(`/documentos/${id}`),
+  getMios: () => api.get('/documentos/mis-documentos'),
+  update: (id: string, data: any) => api.patch(`/documentos/${id}`, data),
 };
+
+
 
 

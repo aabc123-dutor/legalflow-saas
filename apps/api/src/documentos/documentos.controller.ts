@@ -16,7 +16,7 @@ type AuthUser = { sub: string; despachoId: string };
 @UseGuards(JwtAuthGuard)
 @Controller('documentos')
 export class DocumentosController {
-  constructor(private readonly service: DocumentosService) {}
+  constructor(private readonly service: DocumentosService) { }
 
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
@@ -28,6 +28,11 @@ export class DocumentosController {
     return this.service.findByExpediente(expedienteId, user.despachoId);
   }
 
+  @Get('mis-documentos')
+  findMios(@CurrentUser() user: AuthUser) {
+    return this.service.findByClienteUsuario(user.sub, user.despachoId);
+  }
+  
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.findOne(id, user.despachoId);
@@ -69,4 +74,6 @@ export class DocumentosController {
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.remove(id, user.despachoId);
   }
+
+
 }
