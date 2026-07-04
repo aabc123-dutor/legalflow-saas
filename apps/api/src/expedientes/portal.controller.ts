@@ -27,4 +27,9 @@ export class PortalController {
   getResumen(@CurrentUser() user: AuthUser) {
     return this.service.getResumenPortal(user.sub, user.despachoId);
   }
+
+  @Get('mis-facturas')
+  getMisFacturas(@CurrentUser() user: AuthUser) {
+    return this.service.getFacturasCliente(user.sub, user.despachoId);
+  }
 }

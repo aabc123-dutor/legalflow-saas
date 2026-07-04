@@ -70,6 +70,8 @@ export const expedientesApi = {
   getMioById: (id: string) => api.get(`/portal/mis-expedientes/${id}`),
 
   getResumenPortal: () => api.get('/portal/resumen'),
+
+  getMisFacturas: () => api.get('/portal/mis-facturas'),
 };
 
 export const clientesApi = {
