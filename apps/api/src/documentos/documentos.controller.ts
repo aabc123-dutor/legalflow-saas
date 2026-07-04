@@ -7,9 +7,10 @@ import { ApiTags, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
-import { UploadDocumentoDto } from './dto/documento.dto';
+import { UploadDocumentoDto, UpdateDocumentoDto } from './dto/documento.dto';
+import { Roles } from '../auth/decorators/roles.decorator';
 
-type AuthUser = { sub: string; despachoId: string };
+type AuthUser = { sub: string; despachoId: string, role: string };
 
 @ApiTags('Documentos')
 @ApiBearerAuth()
@@ -19,6 +20,7 @@ export class DocumentosController {
   constructor(private readonly service: DocumentosService) { }
 
   @Get()
+  @Roles('ABOGADO')
   findAll(@CurrentUser() user: AuthUser) {
     return this.service.findAll(user.despachoId);
   }
@@ -32,7 +34,7 @@ export class DocumentosController {
   findMios(@CurrentUser() user: AuthUser) {
     return this.service.findByClienteUsuario(user.sub, user.despachoId);
   }
-  
+
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.findOne(id, user.despachoId);
@@ -40,7 +42,7 @@ export class DocumentosController {
 
   @Get(':id/descargar')
   async getDownloadUrl(@Param('id') id: string, @CurrentUser() user: AuthUser) {
-    const url = await this.service.getUrlDescarga(id, user.despachoId);
+    const url = await this.service.getUrlDescarga(id, user.despachoId, user.sub, user.role);
     return { url };
   }
 
@@ -62,15 +64,17 @@ export class DocumentosController {
     @Body() body: UploadDocumentoDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.service.create(user.despachoId, user.sub, file, body);
+    return this.service.create(user.despachoId, user.sub, user.role, file, body);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() body: any, @CurrentUser() user: AuthUser) {
+  @Roles('ABOGADO')
+  update(@Param('id') id: string, @Body() body: UpdateDocumentoDto, @CurrentUser() user: AuthUser) {
     return this.service.update(id, user.despachoId, body);
   }
 
   @Delete(':id')
+  @Roles('ABOGADO')
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.remove(id, user.despachoId);
   }

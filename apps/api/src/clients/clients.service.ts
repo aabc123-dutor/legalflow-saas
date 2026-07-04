@@ -66,13 +66,13 @@ export class ClientesService {
     });
   }
 
-  async update(id: string, usuarioId: string, data: UpdateClienteDto) {
-    await this.findOne(id, usuarioId);
+  async update(id: string, despachoId: string, data: UpdateClienteDto) {
+    await this.findOne(id, despachoId);
     return this.prisma.cliente.update({ where: { id }, data });
   }
 
-  async remove(id: string, usuarioId: string) {
-    await this.findOne(id, usuarioId);
+  async remove(id: string, despachoId: string) {
+    await this.findOne(id, despachoId);
     return this.prisma.cliente.delete({ where: { id } });
   }
 }

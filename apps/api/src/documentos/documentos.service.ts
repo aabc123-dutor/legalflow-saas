@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../common/prisma/prisma.service';
 import { S3Service } from '../common/s3/s3.service';
-import { UploadDocumentoDto } from './dto/documento.dto';
+import { UpdateDocumentoDto, UploadDocumentoDto } from './dto/documento.dto';
 import * as crypto from 'crypto';
 
 @Injectable()
@@ -35,19 +35,31 @@ export class DocumentosService {
   async findOne(id: string, despachoId: string) {
     const item = await this.prisma.documento.findFirst({
       where: { id, despachoId },
+      include: { expediente: { select: { clienteId: true } } },
     });
     if (!item) throw new NotFoundException('Documento no encontrado');
     return item;
   }
 
-  async create(despachoId: string, creadoPorId: string, file: Express.Multer.File, data: UploadDocumentoDto) {
+  async create(despachoId: string, creadoPorId: string, creadoPorRole: string, file: Express.Multer.File, data: UploadDocumentoDto) {
+
     const expediente = await this.prisma.expediente.findFirst({
       where: { id: data.expedienteId, despachoId },
     });
     if (!expediente) throw new NotFoundException('Expediente no encontrado');
 
+    // Aquí va la validación del cliente
+    if (creadoPorRole === 'CLIENTE') {
+      const cliente = await this.prisma.cliente.findFirst({
+        where: { usuarioId: creadoPorId, despachoId },
+      });
+      if (!cliente || expediente.clienteId !== cliente.id) {
+        throw new ForbiddenException('No puedes subir documentos a este expediente');
+      }
+    }
     const hashSha256 = crypto.createHash('sha256').update(file.buffer).digest('hex');
-    const s3Key = `${despachoId}/expedientes/${data.expedienteId}/${Date.now()}-${file.originalname}`;
+    const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const s3Key = `${despachoId}/expedientes/${data.expedienteId}/${Date.now()}-${safeName}`;
 
     await this.s3.upload(s3Key, file.buffer, file.mimetype);
 
@@ -68,13 +80,23 @@ export class DocumentosService {
     });
   }
 
-  async getUrlDescarga(id: string, despachoId: string): Promise<string> {
+  async getUrlDescarga(id: string, despachoId: string, usuarioId: string, role: string): Promise<string> {
     const documento = await this.findOne(id, despachoId);
+
+    if (role === 'CLIENTE') {
+      const cliente = await this.prisma.cliente.findFirst({
+        where: { usuarioId, despachoId },
+      });
+      if (!cliente || documento.expediente.clienteId !== cliente.id || !documento.visibleParaCliente) {
+        throw new ForbiddenException('No tienes acceso a este documento');
+      }
+    }
+
     const filename = documento.titulo.replace(/[\/\\]/g, '-');
     return this.s3.getSignedDownloadUrl(documento.s3Key, 300, filename);
   }
 
-  async update(id: string, despachoId: string, data: any) {
+  async update(id: string, despachoId: string, data: UpdateDocumentoDto) {
     await this.findOne(id, despachoId);
     return this.prisma.documento.update({ where: { id }, data });
   }

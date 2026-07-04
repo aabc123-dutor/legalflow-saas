@@ -30,3 +30,17 @@ export class UploadDocumentoDto {
   @Transform(({ value }) => value === 'true' || value === true)
   visibleParaCliente?: boolean;
 }
+
+export class UpdateDocumentoDto {
+  @IsOptional()
+  @IsBoolean()
+  visibleParaCliente?: boolean;
+
+  @IsOptional()
+  @IsString()
+  titulo?: string;
+
+  @IsOptional()
+  @IsString()
+  descripcion?: string;
+}
