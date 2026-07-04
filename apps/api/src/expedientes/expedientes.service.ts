@@ -187,4 +187,29 @@ export class ExpedientesService {
 
     return { hitos, facturas };
   }
+
+  async getFacturasCliente(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return [];
+
+    const expedientesIds = await this.prisma.expediente.findMany({
+      where: { despachoId, clienteId: cliente.id },
+      select: { id: true },
+    });
+    const ids = expedientesIds.map((e) => e.id);
+
+    return this.prisma.factura.findMany({
+      where: {
+        expedienteId: { in: ids },
+        estado: { notIn: ['BORRADOR'] },
+      },
+      include: {
+        expediente: { select: { titulo: true } },
+        documento: { select: { id: true } },
+      },
+      orderBy: { fechaVencimiento: 'asc' },
+    });
+  }
 }
