@@ -14,7 +14,7 @@ export class DocumentosService {
   findAll(despachoId: string) {
     return this.prisma.documento.findMany({
       where: { despachoId },
-      include: { expediente: { select: { titulo: true, clienteId: true } } },
+      include: { expediente: { select: { titulo: true, clienteId: true } }, creadoPor: { select: { role: true } }, },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -27,6 +27,7 @@ export class DocumentosService {
 
     return this.prisma.documento.findMany({
       where: { expedienteId, despachoId },
+      include: { creadoPor: { select: { role: true } } },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -62,6 +63,7 @@ export class DocumentosService {
         cifrado: true,
         hashSha256,
         sizeBytes: file.size,
+        visibleParaCliente: data.visibleParaCliente ?? true,
       },
     });
   }
@@ -81,5 +83,25 @@ export class DocumentosService {
     const documento = await this.findOne(id, despachoId);
     await this.s3.delete(documento.s3Key);
     return this.prisma.documento.delete({ where: { id } });
+  }
+
+  async findByClienteUsuario(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return [];
+
+    return this.prisma.documento.findMany({
+      where: {
+        despachoId,
+        visibleParaCliente: true,
+        expediente: { clienteId: cliente.id },
+      },
+      include: {
+        expediente: { select: { titulo: true } },
+        creadoPor: { select: { role: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

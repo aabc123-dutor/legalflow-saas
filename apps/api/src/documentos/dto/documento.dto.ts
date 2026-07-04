@@ -1,4 +1,5 @@
-import { IsString, IsOptional, IsEnum, IsUUID } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsUUID, IsBoolean } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export enum TipoDocumento {
   CONTRATO = 'CONTRATO',
@@ -23,4 +24,9 @@ export class UploadDocumentoDto {
   @IsOptional()
   @IsEnum(TipoDocumento)
   tipo?: TipoDocumento;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  visibleParaCliente?: boolean;
 }

@@ -85,7 +85,7 @@ export class AuthService {
   // ── Helpers ──────────────────────────────────────────────────────────────
 
   private async generateTokens(userId: string, email: string, role: string, despachoId: string | null) {
-    const payload = { sub: userId, email, role, despachoId};
+    const payload = { sub: userId, email, role, despachoId };
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwt.signAsync(payload, {
@@ -143,9 +143,18 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuario: { email } },
+      select: { despachoId: true },
+    });
+
     await this.prisma.usuario.update({
       where: { email },
-      data: { passwordHash, active: true },
+      data: {
+        passwordHash,
+        active: true,
+        ...(cliente?.despachoId && { despachoId: cliente.despachoId }),
+      },
     });
 
     await this.redis.del(`invite:${token}`);
