@@ -14,7 +14,7 @@ type AuthUser = { sub: string; despachoId: string };
 @Roles('ABOGADO')
 @Controller('fiscal')
 export class FiscalController {
-  constructor(private readonly service: FiscalService) {}
+  constructor(private readonly service: FiscalService) { }
 
   @Get('config')
   getConfig(@CurrentUser() user: AuthUser) {
@@ -52,5 +52,10 @@ export class FiscalController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.service.getModelo130(user.despachoId, anio, trimestre);
+  }
+
+  @Get('gastos/:anio')
+  gastos(@Param('anio', ParseIntPipe) anio: number, @CurrentUser() user: AuthUser) {
+    return this.service.getResumenGastosTrimestral(user.despachoId, anio);
   }
 }

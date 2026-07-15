@@ -11,6 +11,7 @@ import {
   Calculator,
   Bot,
   LogOut,
+  Wallet,
 } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { authApi } from '@/lib/api';
@@ -27,6 +28,7 @@ const NAV = [
   { href: '/dashboard/clientes', label: 'Clientes', icon: Users, roles: ['ABOGADO'] },
   { href: '/dashboard/documentos', label: 'Documentos', icon: FileText , roles: ['ABOGADO']},
   { href: '/dashboard/facturas', label: 'Facturación', icon: Receipt , roles: ['ABOGADO']},
+  { href: '/dashboard/gastos', label: 'Gastos', icon: Wallet, roles: ['ABOGADO'] },
   { href: '/dashboard/fiscal', label: 'Dashboard Fiscal', icon: Calculator, roles: ['ABOGADO'] },
   { href: '/dashboard/ai', label: 'Asistente Legal', icon: Bot, roles: ['ABOGADO'] },
 ].filter((item) => item.roles.includes(user?.role ?? ''));

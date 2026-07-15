@@ -68,6 +68,33 @@ enum RolDespacho {
   MIEMBRO
 }
 
+enum FrecuenciaGasto {
+  MENSUAL
+  TRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+// Tipologías de gasto deducible (conceptos del Libro registro de compras y gastos / IRPF)
+enum CategoriaGasto {
+  ALQUILER // Arrendamientos y cánones (oficina, renting)
+  SUMINISTROS // Luz, agua, teléfono, internet
+  MATERIAL_OFICINA // Material y consumibles de oficina
+  SERVICIOS_PROFESIONALES // Gestoría, procuradores, peritos
+  CUOTA_AUTONOMOS // Seguridad Social (RETA)
+  COLEGIO_PROFESIONAL // Cuotas de colegios y asociaciones
+  SEGUROS // RC profesional, salud
+  SOFTWARE_SUSCRIPCIONES // Software y suscripciones
+  FORMACION // Cursos y formación
+  PUBLICIDAD // Publicidad y marketing
+  MANUTENCION // Manutención y dietas (con límites)
+  VEHICULO_DESPLAZAMIENTO // Vehículo, combustible, transporte
+  GASTOS_FINANCIEROS // Comisiones e intereses
+  TRIBUTOS // IAE, tasas y tributos deducibles
+  AMORTIZACION // Amortización de inmovilizado
+  OTROS
+}
+
 // ─── Usuario ────────────────────────────────────────────────────────────────
 
 model Despacho {
@@ -85,6 +112,7 @@ model Despacho {
   documentos     Documento[]
   conversaciones Conversacion[]
   usageEvents    UsageEvent[]
+  gastos         Gasto[]
 
     // Fiscal config
   configuracionFiscal ConfiguracionFiscal?
@@ -115,6 +143,7 @@ model Usuario {
   expedientes     Expediente[]
   documentos      Documento[]
   facturas        Factura[]
+  gastos          Gasto[]
   conversaciones  Conversacion[]
   auditLogs       AuditLog[]
 
@@ -306,6 +335,57 @@ model Suplido {
   documentos Documento[]
 
   @@map("suplidos")
+}
+
+// ─── Gasto ────────────────────────────────────────────────────────────────────
+
+model Gasto {
+  id            String         @id @default(uuid())
+  despachoId    String         @map("despacho_id")
+  creadoPorId   String         @map("creado_por_id")
+  fecha         DateTime // fecha del gasto / factura recibida
+  categoria     CategoriaGasto @default(OTROS)
+  proveedor     String
+  nifProveedor  String?        @map("nif_proveedor")
+  numeroFactura String?        @map("numero_factura")
+  descripcion   String?
+
+  // Importes
+  baseImponible Decimal @map("base_imponible") @db.Decimal(12, 2)
+  tipoIva       Decimal @default(21) @map("tipo_iva") @db.Decimal(5, 2)
+  cuotaIva      Decimal @map("cuota_iva") @db.Decimal(12, 2) // IVA soportado
+  total         Decimal @db.Decimal(12, 2)
+
+  // Deducibilidad (según el tipo de gasto y su afectación a la actividad)
+  deducible        Boolean @default(true)
+  ivaDeduciblePct  Decimal @default(100) @map("iva_deducible_pct") @db.Decimal(5, 2)
+  irpfDeduciblePct Decimal @default(100) @map("irpf_deducible_pct") @db.Decimal(5, 2)
+
+  // Justificante (factura del gasto) almacenado en S3
+  justificanteS3Key  String? @map("justificante_s3_key")
+  justificanteNombre String? @map("justificante_nombre")
+
+  // Recurrencia (plantilla + ocurrencias generadas)
+  recurrente            Boolean          @default(false)
+  frecuencia            FrecuenciaGasto?
+  esPlantilla           Boolean          @default(false) @map("es_plantilla")
+  fechaFin              DateTime?        @map("fecha_fin")
+  ultimoPeriodoGenerado DateTime?        @map("ultimo_periodo_generado")
+  plantillaId           String?          @map("plantilla_id")
+
+  // Autorrelación: una plantilla tiene muchas ocurrencias
+  plantilla   Gasto?  @relation("GastoOcurrencias", fields: [plantillaId], references: [id], onDelete: SetNull)
+  ocurrencias Gasto[] @relation("GastoOcurrencias")
+
+  notas     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  despacho  Despacho @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  creadoPor Usuario  @relation(fields: [creadoPorId], references: [id])
+
+  @@index([despachoId, fecha(sort: Asc)])
+  @@map("gastos")
 }
 
 // ─── ConfiguracionFiscal ─────────────────────────────────────────────────────
