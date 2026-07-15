@@ -57,6 +57,11 @@ export default function FiscalPage() {
     queryFn: () => fiscalApi.resumen(anio).then((r) => r.data),
   });
 
+  const { data: gastos } = useQuery({
+    queryKey: ['fiscal-gastos', anio],
+    queryFn: () => fiscalApi.gastos(anio).then((r) => r.data),
+  });
+
   const TRIMESTRES = ['Q1 (Ene-Mar)', 'Q2 (Abr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dic)'];
 
   const totales = resumen?.reduce(
@@ -310,6 +315,10 @@ export default function FiscalPage() {
               <span className="text-gray-500">Retenciones ya practicadas</span>
               <span className="font-medium text-red-500">-{(modelo130?.retencionesAcumuladas ?? 0).toFixed(2)} €</span>
             </div>
+            <div className="flex justify-between py-1">
+              <span className="text-gray-500">Gastos deducibles</span>
+              <span className="font-medium text-red-500">-{(modelo130?.gastosDeducibles ?? 0).toFixed(2)} €</span>
+            </div>
             <div className="flex justify-between items-baseline border-t pt-3 mt-2">
               <span className="font-medium text-gray-900">Pago fraccionado</span>
               <span className="text-lg font-bold text-gray-900">{(modelo130?.pagoFraccionado ?? 0).toFixed(2)} €</span>
@@ -337,6 +346,7 @@ export default function FiscalPage() {
               <th className="px-6 py-3 font-medium">Base imponible</th>
               <th className="px-6 py-3 font-medium">IVA (303)</th>
               <th className="px-6 py-3 font-medium">IRPF (130)</th>
+              <th className="px-6 py-3 font-medium">Gastos</th>
               <th className="px-6 py-3 font-medium">Total</th>
             </tr>
           </thead>
@@ -350,6 +360,9 @@ export default function FiscalPage() {
                   <td className="px-6 py-4">{(t?.baseImponible ?? 0).toFixed(2)} €</td>
                   <td className="px-6 py-4 text-green-600">+{(t?.cuotaIva ?? 0).toFixed(2)} €</td>
                   <td className="px-6 py-4 text-red-500">-{(t?.cuotaIrpf ?? 0).toFixed(2)} €</td>
+                  <td className="px-6 py-4 text-red-500">
+                    -{((gastos?.find((x: any) => x.trimestre === q)?.gastoDeducible) ?? 0).toFixed(2)} €
+                  </td>
                   <td className="px-6 py-4 font-semibold">{(t?.totalFacturado ?? 0).toFixed(2)} €</td>
                 </tr>
               );

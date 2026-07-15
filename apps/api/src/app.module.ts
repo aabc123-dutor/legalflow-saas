@@ -17,6 +17,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { EmailModule } from './common/email/email.module';
 import { S3Module } from './common/s3/s3.module';
+import { GastosModule } from './gastos/gastos.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { S3Module } from './common/s3/s3.module';
     AiModule,
     EmailModule,
     S3Module,
+    GastosModule,
   ],
 
   providers: [
