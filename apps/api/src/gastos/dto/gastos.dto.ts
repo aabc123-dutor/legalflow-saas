@@ -22,7 +22,6 @@ export enum CategoriaGasto {
 export enum FrecuenciaGasto {
     MENSUAL = 'MENSUAL',
     TRIMESTRAL = 'TRIMESTRAL',
-    CUATRIMESTRAL = 'CUATRIMESTRAL',
     SEMESTRAL = 'SEMESTRAL',
     ANUAL = 'ANUAL',
 }

@@ -21,7 +21,7 @@ export class FacturasService {
       include: {
         expediente: { select: { titulo: true, cliente: { select: { nombre: true, apellidos: true, empresa: true } } } },
       },
-      orderBy: { fechaEmision: 'desc' },
+      orderBy: { fechaVencimiento: 'asc' },
     });
   }
 

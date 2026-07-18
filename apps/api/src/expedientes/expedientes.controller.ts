@@ -18,7 +18,7 @@ type AuthUser = { sub: string; despachoId: string };
 @Roles('ABOGADO')
 @Controller('expedientes')
 export class ExpedientesController {
-  constructor(private readonly service: ExpedientesService) {}
+  constructor(private readonly service: ExpedientesService) { }
 
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
@@ -81,4 +81,5 @@ export class ExpedientesController {
   proximosHitos(@CurrentUser() user: AuthUser) {
     return this.service.proximosHitos(user.despachoId);
   }
+
 }

@@ -18,6 +18,7 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { Public } from './decorators/public.decorator';
 import { ActivarCuentaDto } from './dto/auth.dto';
+import { Auditar, SinAuditar } from '../auditoria/decorators/auditoria.decorator';
 
 const COOKIE_OPTS = {
   httpOnly: true,
@@ -41,6 +42,7 @@ export class AuthController {
   @Post('refresh')
   @UseGuards(JwtRefreshGuard)
   @HttpCode(HttpStatus.OK)
+  @SinAuditar()   
   async refresh(
     @CurrentUser() user: { sub: string },
     @Req() req: Request,
@@ -55,6 +57,7 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
+  @Auditar({ accion: 'LOGOUT', entidad: 'auth' })
   async logout(@CurrentUser() user: { sub: string }, @Res({ passthrough: true }) res: Response) {
     await this.authService.logout(user.sub);
     res.clearCookie('refreshToken', COOKIE_OPTS);
@@ -83,6 +86,7 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Auditar({ accion: 'LOGIN', entidad: 'auth' })
   async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.login(dto);
     res.cookie('refreshToken', result.refreshToken, { ...COOKIE_OPTS, maxAge: 7 * 24 * 60 * 60 * 1000 });

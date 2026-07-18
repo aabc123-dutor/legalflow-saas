@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { documentosApi, expedientesApi } from '@/lib/api';
-import { FileText, Upload, Download, X } from 'lucide-react';
+import { FileText, Upload, Download, X, Eye, EyeOff } from 'lucide-react';
 
 const TIPO_DOC_LABEL: Record<string, string> = {
   CONTRATO: 'Contrato',
@@ -40,7 +40,7 @@ export default function DocumentosPage() {
     queryFn: () => expedientesApi.list().then((r) => r.data),
   });
 
-  const form = useForm<{ expedienteId: string; titulo: string; tipo: string }>();
+  const form = useForm<{ expedienteId: string; titulo: string; tipo: string; visibleParaCliente: boolean }>();
 
   const uploadMutation = useMutation({
     mutationFn: (formData: FormData) => documentosApi.upload(formData),
@@ -52,13 +52,14 @@ export default function DocumentosPage() {
     },
   });
 
-  const onSubmit = (data: { expedienteId: string; titulo: string; tipo: string }) => {
+  const onSubmit = (data: { expedienteId: string; titulo: string; tipo: string, visibleParaCliente: boolean }) => {
     if (!archivoSeleccionado) return;
     const formData = new FormData();
     formData.append('file', archivoSeleccionado);
     formData.append('expedienteId', data.expedienteId);
     formData.append('titulo', data.titulo);
     formData.append('tipo', data.tipo);
+    formData.append('visibleParaCliente', data.visibleParaCliente ? 'true' : 'false');
     uploadMutation.mutate(formData);
   };
 
@@ -111,6 +112,7 @@ export default function DocumentosPage() {
                 <th className="px-6 py-3 font-medium">Expediente</th>
                 <th className="px-6 py-3 font-medium">Tamaño</th>
                 <th className="px-6 py-3 font-medium">Subido</th>
+                <th className="px-6 py-3 font-medium">Subido por</th>
                 <th className="px-6 py-3 font-medium"></th>
               </tr>
             </thead>
@@ -126,7 +128,25 @@ export default function DocumentosPage() {
                   <td className="px-6 py-4 text-gray-500">{d.expediente?.titulo ?? '—'}</td>
                   <td className="px-6 py-4 text-gray-500">{(d.sizeBytes / 1024).toFixed(0)} KB</td>
                   <td className="px-6 py-4 text-gray-500">{new Date(d.createdAt).toLocaleDateString('es-ES')}</td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${d.creadoPor?.role === 'CLIENTE'
+                      ? 'bg-orange-50 text-orange-700'
+                      : 'bg-brand-50 text-brand-700'
+                      }`}>
+                      {d.creadoPor?.role === 'CLIENTE' ? 'Cliente' : 'Abogado'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right flex items-center justify-end gap-1">
+                    <button
+                      onClick={async () => {
+                        await documentosApi.update(d.id, { visibleParaCliente: !d.visibleParaCliente });
+                        queryClient.invalidateQueries({ queryKey: ['documentos'] });
+                      }}
+                      className={`p-1 ${d.visibleParaCliente ? 'text-green-500' : 'text-gray-300'} hover:text-green-600`}
+                      title={d.visibleParaCliente ? 'Visible para cliente' : 'Oculto para cliente'}
+                    >
+                      {d.visibleParaCliente ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                    </button>
                     <button
                       onClick={async () => {
                         const { data } = await documentosApi.getDownloadUrl(d.id);
@@ -193,6 +213,16 @@ export default function DocumentosPage() {
                   <option value="DICTAMEN">Dictamen</option>
                   <option value="PODER_NOTARIAL">Poder notarial</option>
                 </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="visible"
+                  defaultChecked
+                  {...form.register('visibleParaCliente')}
+                  className="rounded border-gray-300"
+                />
+                <label htmlFor="visible" className="text-sm text-gray-700">Visible para el cliente</label>
               </div>
               {uploadMutation.isError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded-lg">

@@ -28,7 +28,7 @@ const CATEGORIAS: { value: string; label: string }[] = [
 ];
 const LABEL: Record<string, string> = Object.fromEntries(CATEGORIAS.map((c) => [c.value, c.label]));
 const FREC_LABEL: Record<string, string> = {
-  MENSUAL: 'Mensual', TRIMESTRAL: 'Trimestral', CUATRIMESTRAL: 'Cuatrimestral', SEMESTRAL: 'Semestral', ANUAL: 'Anual',
+  MENSUAL: 'Mensual', TRIMESTRAL: 'Trimestral', SEMESTRAL: 'Semestral', ANUAL: 'Anual',
 };
 const eur = (n: number) => n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 const toInput = (d?: string | null) => (d ? new Date(d).toISOString().split('T')[0] : '');
@@ -504,7 +504,6 @@ export default function GastosPage() {
                     <select {...register('frecuencia')} className="w-full px-3 py-2 border rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
                       <option value="MENSUAL">Mensual</option>
                       <option value="TRIMESTRAL">Trimestral</option>
-                      <option value="CUATRIMESTRAL">Cuatrimestral</option>
                       <option value="SEMESTRAL">Semestral</option>
                       <option value="ANUAL">Anual</option>
                     </select>

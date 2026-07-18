@@ -8,6 +8,7 @@ import { DocumentosService } from './documentos.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UploadDocumentoDto } from './dto/documento.dto';
+import { Auditar } from '../auditoria/decorators/auditoria.decorator';
 
 type AuthUser = { sub: string; despachoId: string };
 
@@ -16,7 +17,7 @@ type AuthUser = { sub: string; despachoId: string };
 @UseGuards(JwtAuthGuard)
 @Controller('documentos')
 export class DocumentosController {
-  constructor(private readonly service: DocumentosService) {}
+  constructor(private readonly service: DocumentosService) { }
 
   @Get()
   findAll(@CurrentUser() user: AuthUser) {
@@ -28,12 +29,18 @@ export class DocumentosController {
     return this.service.findByExpediente(expedienteId, user.despachoId);
   }
 
+  @Get('mis-documentos')
+  findMios(@CurrentUser() user: AuthUser) {
+    return this.service.findByClienteUsuario(user.sub, user.despachoId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.findOne(id, user.despachoId);
   }
 
   @Get(':id/descargar')
+  @Auditar({ accion: 'DOWNLOAD' })
   async getDownloadUrl(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     const url = await this.service.getUrlDescarga(id, user.despachoId);
     return { url };
@@ -69,4 +76,6 @@ export class DocumentosController {
   remove(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     return this.service.remove(id, user.despachoId);
   }
+
+
 }

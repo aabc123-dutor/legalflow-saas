@@ -112,4 +112,104 @@ export class ExpedientesService {
       },
     });
   }
+
+  async findByClienteUsuario(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return [];
+
+    return this.prisma.expediente.findMany({
+      where: { despachoId, clienteId: cliente.id },
+      orderBy: { fechaApertura: 'desc' },
+    });
+  }
+
+  async findOneCliente(id: string, usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) throw new NotFoundException('Cliente no encontrado');
+
+    const expediente = await this.prisma.expediente.findFirst({
+      where: { id, despachoId, clienteId: cliente.id },
+      include: {
+        hitos: { orderBy: { fecha: 'asc' } },
+        documentos: {
+          where: { visibleParaCliente: true },
+          include: { creadoPor: { select: { role: true } } },
+          orderBy: { createdAt: 'desc' },
+        },
+        facturas: {
+          where: { estado: { not: 'BORRADOR' } },
+          orderBy: { fechaEmision: 'desc' },
+        },
+      },
+    });
+    if (!expediente) throw new NotFoundException('Expediente no encontrado');
+    return expediente;
+  }
+
+  async getResumenPortal(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return { hitos: [], facturas: [] };
+
+    const expedientesIds = await this.prisma.expediente.findMany({
+      where: { despachoId, clienteId: cliente.id },
+      select: { id: true },
+    });
+    const ids = expedientesIds.map((e) => e.id);
+
+    const [hitos, facturas] = await Promise.all([
+      this.prisma.hito.findMany({
+        where: {
+          expedienteId: { in: ids },
+          fecha: { gte: new Date() },
+        },
+        include: { expediente: { select: { titulo: true } } },
+        orderBy: { fecha: 'asc' },
+        take: 5,
+      }),
+      this.prisma.factura.findMany({
+        where: {
+          expedienteId: { in: ids },
+          estado: { notIn: ['PAGADA', 'ANULADA', 'BORRADOR'] },
+          fechaVencimiento: {
+            lte: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
+          },
+        },
+        include: { expediente: { select: { titulo: true } } },
+        orderBy: { fechaVencimiento: 'asc' },
+      }),
+    ]);
+
+    return { hitos, facturas };
+  }
+
+  async getFacturasCliente(usuarioId: string, despachoId: string) {
+    const cliente = await this.prisma.cliente.findFirst({
+      where: { usuarioId, despachoId },
+    });
+    if (!cliente) return [];
+
+    const expedientesIds = await this.prisma.expediente.findMany({
+      where: { despachoId, clienteId: cliente.id },
+      select: { id: true },
+    });
+    const ids = expedientesIds.map((e) => e.id);
+
+    return this.prisma.factura.findMany({
+      where: {
+        expedienteId: { in: ids },
+        estado: { notIn: ['BORRADOR'] },
+      },
+      include: {
+        expediente: { select: { titulo: true } },
+        documento: { select: { id: true } },
+      },
+      orderBy: { fechaVencimiento: 'asc' },
+    });
+  }
 }

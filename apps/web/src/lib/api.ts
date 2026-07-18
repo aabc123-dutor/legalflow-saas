@@ -65,6 +65,13 @@ export const expedientesApi = {
   deleteNota: (notaId: string) => api.delete(`/expedientes/notas/${notaId}`),
 
   proximosHitos: () => api.get('/expedientes/hitos/proximos'),
+
+  getMios: () => api.get('/portal/mis-expedientes'),
+  getMioById: (id: string) => api.get(`/portal/mis-expedientes/${id}`),
+
+  getResumenPortal: () => api.get('/portal/resumen'),
+
+  getMisFacturas: () => api.get('/portal/mis-facturas'),
 };
 
 export const clientesApi = {
@@ -95,6 +102,7 @@ export const fiscalApi = {
   calcular: (base: number) => api.get(`/fiscal/calcular/${base}`),
   modelo303: (anio: number, t: number) => api.get(`/fiscal/modelo303/${anio}/${t}`),
   modelo130: (anio: number, t: number) => api.get(`/fiscal/modelo130/${anio}/${t}`),
+  gastos: (anio: number) => api.get(`/fiscal/gastos/${anio}`),
 };
 
 export const aiApi = {
@@ -112,6 +120,21 @@ export const documentosApi = {
   upload: (formData: FormData) =>
     api.post('/documentos', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
   delete: (id: string) => api.delete(`/documentos/${id}`),
+  getMios: () => api.get('/documentos/mis-documentos'),
+  update: (id: string, data: any) => api.patch(`/documentos/${id}`, data),
 };
 
-
+export const gastosApi = {
+  list: () => api.get('/gastos'),
+  get: (id: string) => api.get(`/gastos/${id}`),
+  create: (data: any) => api.post('/gastos', data),
+  update: (id: string, data: any) => api.patch(`/gastos/${id}`, data),
+  delete: (id: string) => api.delete(`/gastos/${id}`),
+  uploadJustificante: (id: string, formData: FormData) =>
+    api.post(`/gastos/${id}/justificante`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+  getJustificanteUrl: (id: string) => api.get(`/gastos/${id}/justificante`),
+  deleteJustificante: (id: string) => api.delete(`/gastos/${id}/justificante`),
+  recurrentes: () => api.get('/gastos/recurrentes'),
+  eliminarRecurrente: (id: string) => api.delete(`/gastos/recurrentes/${id}`),
+  reemplazarRecurrente: (id: string, data: any) => api.patch(`/gastos/recurrentes/${id}`, data),
+};

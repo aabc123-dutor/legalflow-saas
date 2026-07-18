@@ -12,11 +12,14 @@ import { FacturasModule } from './facturas/facturas.module';
 import { FiscalModule } from './fiscal/fiscal.module';
 import { AiModule } from './ai/ai.module';
 import { RedisModule } from './common/redis/redis.module';
-import { APP_GUARD } from '@nestjs/core';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { EmailModule } from './common/email/email.module';
 import { S3Module } from './common/s3/s3.module';
+import { GastosModule } from './gastos/gastos.module';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditoriaModule } from './auditoria/auditoria.module';
+import { AuditoriaInterceptor } from './auditoria/auditoria.interceptor';
 
 @Module({
   imports: [
@@ -51,6 +54,8 @@ import { S3Module } from './common/s3/s3.module';
     AiModule,
     EmailModule,
     S3Module,
+    GastosModule,
+    AuditoriaModule,
   ],
 
   providers: [
@@ -61,6 +66,10 @@ import { S3Module } from './common/s3/s3.module';
     {
       provide: APP_GUARD,
       useClass: RolesGuard,
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditoriaInterceptor,
     },
   ],
 })
