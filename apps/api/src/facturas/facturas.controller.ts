@@ -5,6 +5,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateFacturaDto, UpdateFacturaDto, CreateSuplidoDto, CreateConceptoDto } from './dto/facturas.dto';
+import { Auditar } from '../auditoria/decorators/auditoria.decorator';
 
 type AuthUser = { sub: string; despachoId: string };
 
@@ -37,6 +38,7 @@ export class FacturasController {
   }
 
   @Get(':id/pdf')
+  @Auditar({ accion: 'DOWNLOAD' })
   async getPdfUrl(@Param('id') id: string, @CurrentUser() user: AuthUser) {
     const url = await this.service.getUrlDescarga(id, user.despachoId);
     return { url };

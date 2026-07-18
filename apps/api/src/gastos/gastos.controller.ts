@@ -10,6 +10,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateGastoDto, UpdateGastoDto } from './dto/gastos.dto';
+import { Auditar } from '../auditoria/decorators/auditoria.decorator';
 
 type AuthUser = { sub: string; despachoId: string };
 
@@ -58,6 +59,7 @@ export class GastosController {
 
   // ── Justificante ──────────────────────────────────────────────────────────
   @Post(':id/justificante')
+  @Auditar({ accion: 'DOWNLOAD' })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(FileInterceptor('file'))
   subirJustificante(
