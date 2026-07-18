@@ -68,6 +68,43 @@ enum RolDespacho {
   MIEMBRO
 }
 
+enum FrecuenciaGasto {
+  MENSUAL
+  TRIMESTRAL
+  CUATRIMESTRAL
+  SEMESTRAL
+  ANUAL
+}
+
+enum TipoNotificacion {
+  DOCUMENTO_SUBIDO     // cliente sube documento → abogado
+  DOCUMENTO_COMPARTIDO // abogado sube documento visible → cliente
+  FACTURA_EMITIDA      // factura emitida → cliente
+  HITO_PROXIMO         // recordatorio de hito próximo
+  FACTURA_POR_VENCER   // recordatorio: factura a punto de vencer
+  FACTURA_VENCIDA      // recordatorio: factura vencida
+}
+
+// Tipologías de gasto deducible (conceptos del Libro registro de compras y gastos / IRPF)
+enum CategoriaGasto {
+  ALQUILER // Arrendamientos y cánones (oficina, renting)
+  SUMINISTROS // Luz, agua, teléfono, internet
+  MATERIAL_OFICINA // Material y consumibles de oficina
+  SERVICIOS_PROFESIONALES // Gestoría, procuradores, peritos
+  CUOTA_AUTONOMOS // Seguridad Social (RETA)
+  COLEGIO_PROFESIONAL // Cuotas de colegios y asociaciones
+  SEGUROS // RC profesional, salud
+  SOFTWARE_SUSCRIPCIONES // Software y suscripciones
+  FORMACION // Cursos y formación
+  PUBLICIDAD // Publicidad y marketing
+  MANUTENCION // Manutención y dietas (con límites)
+  VEHICULO_DESPLAZAMIENTO // Vehículo, combustible, transporte
+  GASTOS_FINANCIEROS // Comisiones e intereses
+  TRIBUTOS // IAE, tasas y tributos deducibles
+  AMORTIZACION // Amortización de inmovilizado
+  OTROS
+}
+
 // ─── Usuario ────────────────────────────────────────────────────────────────
 
 model Despacho {
@@ -85,6 +122,9 @@ model Despacho {
   documentos     Documento[]
   conversaciones Conversacion[]
   usageEvents    UsageEvent[]
+  gastos         Gasto[]
+  auditLogs      AuditLog[]
+  notificaciones Notificacion[]
 
     // Fiscal config
   configuracionFiscal ConfiguracionFiscal?
@@ -117,7 +157,8 @@ model Usuario {
   facturas        Factura[]
   conversaciones  Conversacion[]
   auditLogs       AuditLog[]
-
+  notificaciones Notificacion[]
+  
   @@map("usuarios")
 }
 
@@ -402,6 +443,9 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+
+// ─── Plan de uso ─────────────────────────────────────────────────────────────────
+
 model UsageEvent {
   id         String   @id @default(uuid())
   despachoId String   @map("despacho_id")
@@ -423,4 +467,25 @@ model PlanLimit {
   maxStorageMb    Int         @map("max_storage_mb")
 
   @@map("plan_limits")
+}
+
+// ─── Notificaciones ─────────────────────────────────────────────────────────────────
+
+model Notificacion {
+  id                String           @id @default(uuid())
+  despachoId        String           @map("despacho_id")
+  usuarioId         String?          @map("usuario_id")           // destinatario (si es usuario de la plataforma)
+  destinatarioEmail String           @map("destinatario_email")   // a dónde se envió realmente
+  tipo              TipoNotificacion
+  entidad           String
+  entidadId         String?          @map("entidad_id")
+  asunto            String
+  enviadoEn         DateTime         @default(now()) @map("enviado_en")
+
+  despacho Despacho @relation(fields: [despachoId], references: [id], onDelete: Cascade)
+  usuario  Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([despachoId, enviadoEn])
+  @@index([tipo, entidadId])   // clave del anti-duplicados de los recordatorios
+  @@map("notificaciones")
 }
