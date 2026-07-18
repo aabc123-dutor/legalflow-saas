@@ -113,6 +113,7 @@ model Despacho {
   conversaciones Conversacion[]
   usageEvents    UsageEvent[]
   gastos         Gasto[]
+  auditLogs      AuditLog[]
 
     // Fiscal config
   configuracionFiscal ConfiguracionFiscal?
@@ -466,20 +467,23 @@ model JurisprudenciaBase {
 // ─── AuditLog ─────────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id        String       @id @default(uuid())
-  usuarioId String?      @map("usuario_id")
-  accion    TipoAuditLog
-  entidad   String
-  entidadId String?      @map("entidad_id")
-  detalle   Json?
-  ip        String?
-  userAgent String?      @map("user_agent")
-  createdAt DateTime     @default(now()) @map("created_at")
+  id         String       @id @default(uuid())
+  despachoId String?      @map("despacho_id")  
+  usuarioId  String?      @map("usuario_id")
+  accion     TipoAuditLog
+  entidad    String
+  entidadId  String?      @map("entidad_id")
+  detalle    Json?
+  ip         String?
+  userAgent  String?      @map("user_agent")
+  createdAt  DateTime     @default(now()) @map("created_at")
 
-  usuario Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  usuario  Usuario?  @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  despacho Despacho? @relation(fields: [despachoId], references: [id], onDelete: Cascade)   
 
   @@index([usuarioId, createdAt])
   @@index([entidad, entidadId])
+  @@index([despachoId, createdAt])   
   @@map("audit_logs")
 }
 
